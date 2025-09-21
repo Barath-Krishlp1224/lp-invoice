@@ -1,8 +1,7 @@
-
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, Edit3, DollarSign, Copy, Search } from 'lucide-react';
+import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, Edit3, DollarSign, Copy, Search, Cloud, File, X, Monitor, Zap, Shield, Package, Archive } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export default function IndividualTransactionPDFs() {
@@ -22,19 +21,35 @@ export default function IndividualTransactionPDFs() {
   const [dateTime, setDateTime] = useState('');
   const [duplicates, setDuplicates] = useState([]);
   const [showDuplicates, setShowDuplicates] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [generatingZip, setGeneratingZip] = useState(false);
+  const [zipProgress, setZipProgress] = useState(0);
   
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
   
-  // Custom prefix editing state
   const [editingPrefixes, setEditingPrefixes] = useState(false);
   const [customPrefixes, setCustomPrefixes] = useState({
     auxford: 'AUX-',
     jetpack: 'JET-'
   });
 
-  // Merchant configuration - now uses customPrefixes state
+  // JSZip library - load from CDN
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    script.async = true;
+    document.head.appendChild(script);
+    
+    return () => {
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+    };
+  }, []);
+
   const getMerchantConfig = (rowData) => {
     const merchantConfig = {
       'auxford': {
@@ -50,24 +65,17 @@ export default function IndividualTransactionPDFs() {
     };
 
     if (!merchantColumn || !rowData[merchantColumn]) {
-      return merchantConfig['jetpack']; // Default to jetpack
+      return merchantConfig['jetpack']; 
     }
     
     const merchantName = String(rowData[merchantColumn]).toLowerCase().trim();
     
-    // Debug logging - you can remove this after testing
-    console.log('Original merchant value:', rowData[merchantColumn]);
-    console.log('Processed merchant name:', merchantName);
-    console.log('Available config keys:', Object.keys(merchantConfig));
-    
-    // More flexible matching
     if (merchantName.includes('auxford')) {
       return merchantConfig['auxford'];
     } else if (merchantName.includes('jetpack')) {
       return merchantConfig['jetpack'];
     }
     
-    // Exact match fallback
     return merchantConfig[merchantName] || merchantConfig['jetpack'];
   };
 
@@ -92,7 +100,6 @@ export default function IndividualTransactionPDFs() {
     return () => clearInterval(interval);
   }, []);
 
-  // Duplicate detection function
   const findDuplicates = (data, columnName) => {
     if (!columnName || !data.length) return [];
     
@@ -109,7 +116,6 @@ export default function IndividualTransactionPDFs() {
       }
     });
     
-    // Find values that appear more than once
     Object.entries(valueMap).forEach(([value, rows]) => {
       if (rows.length > 1) {
         duplicateRows.push({
@@ -123,7 +129,6 @@ export default function IndividualTransactionPDFs() {
     return duplicateRows;
   };
 
-  // Update duplicates when duplicate column changes
   useEffect(() => {
     if (preview && duplicateColumn) {
       const foundDuplicates = findDuplicates(preview.data, duplicateColumn);
@@ -133,7 +138,6 @@ export default function IndividualTransactionPDFs() {
     }
   }, [preview, duplicateColumn]);
 
-  // Pagination calculations
   const totalPages = preview ? Math.ceil(preview.data.length / rowsPerPage) : 0;
   const startIndex = (currentPage - 1) * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
@@ -164,51 +168,74 @@ export default function IndividualTransactionPDFs() {
     }));
   };
 
-  const handleFileChange = (event) => {
-    const selectedFile = event.target.files[0];
+  const processFile = (selectedFile) => {
     if (selectedFile && (selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
                          selectedFile.type === 'application/vnd.ms-excel' || 
                          selectedFile.type === 'text/csv')) {
-      setFile(selectedFile);
-      setPreview(null);
+      setIsProcessing(true);
+      setUploadProgress(0);
       setError(null);
-      setRrnColumn('');
-      setUpiColumn('');
-      setMerchantColumn('');
-      setAmountColumn('');
-      setDuplicateColumn('');
-      setDuplicates([]);
-      setShowDuplicates(false);
-      setCurrentPage(1); // Reset pagination
+      
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            setTimeout(() => {
+              setFile(selectedFile);
+              setPreview(null);
+              setRrnColumn('');
+              setUpiColumn('');
+              setMerchantColumn('');
+              setAmountColumn('');
+              setDuplicateColumn('');
+              setDuplicates([]);
+              setShowDuplicates(false);
+              setCurrentPage(1);
+              setIsProcessing(false);
+            }, 500);
+            return 100;
+          }
+          return prev + Math.random() * 15;
+        });
+      }, 100);
+      
     } else {
-      alert('Please select a valid Excel file (.xlsx, .xls) or CSV file');
+      setError('Invalid file format. Please upload Excel (.xlsx, .xls) or CSV files only.');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    processFile(selectedFile);
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragging(false);
     }
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
+    e.stopPropagation();
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && (droppedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
-                        droppedFile.type === 'application/vnd.ms-excel' || 
-                        droppedFile.type === 'text/csv')) {
-      setFile(droppedFile);
-      setPreview(null);
-      setError(null);
-      setRrnColumn('');
-      setUpiColumn('');
-      setMerchantColumn('');
-      setAmountColumn('');
-      setDuplicateColumn('');
-      setDuplicates([]);
-      setShowDuplicates(false);
-      setCurrentPage(1); // Reset pagination
-    } else {
-      alert('Please drop a valid Excel file (.xlsx, .xls) or CSV file');
-    }
+    processFile(droppedFile);
   };
 
   const readExcelFile = (file) => {
@@ -392,7 +419,6 @@ export default function IndividualTransactionPDFs() {
       'payee_upi', 'payer_upi', 'upivirtualpaymentaddress'
     ];
     
-    // First, try to find exact UPI column names
     for (const header of headers) {
       const headerLower = header.toLowerCase().replace(/[^a-z0-9]/g, '');
       if (upiPatterns.some(pattern => headerLower.includes(pattern))) {
@@ -400,7 +426,6 @@ export default function IndividualTransactionPDFs() {
       }
     }
     
-    // If no exact match, look for columns that contain UPI-like data
     if (sampleData && sampleData.length > 0) {
       for (const header of headers) {
         if (header === '_rowIndex') continue;
@@ -432,7 +457,6 @@ export default function IndividualTransactionPDFs() {
   const detectRequiredColumns = (headers, sampleData) => {
     const detectedColumns = {};
     
-    // Detect Transaction Date & Time
     detectedColumns.transactionDate = headers.find(h => {
       const lower = h.toLowerCase();
       return lower.includes('transaction') && lower.includes('date') || 
@@ -447,7 +471,6 @@ export default function IndividualTransactionPDFs() {
              lower.includes('time');
     });
     
-    // Detect Merchant Name
     detectedColumns.merchantName = headers.find(h => {
       const lower = h.toLowerCase();
       return lower.includes('merchant') && lower.includes('name') ||
@@ -456,7 +479,6 @@ export default function IndividualTransactionPDFs() {
              lower.includes('store');
     });
     
-    // Detect Amount
     detectedColumns.amount = headers.find(h => {
       const lower = h.toLowerCase();
       return lower.includes('amount') ||
@@ -465,7 +487,6 @@ export default function IndividualTransactionPDFs() {
              lower.includes('transaction_amount');
     });
     
-    // Detect VPA/VBA
     detectedColumns.vpa = headers.find(h => {
       const lower = h.toLowerCase();
       return lower.includes('vpa') ||
@@ -474,7 +495,6 @@ export default function IndividualTransactionPDFs() {
              lower.includes('payee') && (lower.includes('vpa') || lower.includes('upi'));
     });
     
-    // Detect UTR
     detectedColumns.utr = headers.find(h => {
       const lower = h.toLowerCase();
       return lower.includes('utr') ||
@@ -483,7 +503,6 @@ export default function IndividualTransactionPDFs() {
              lower.includes('txn') && lower.includes('ref');
     });
     
-    // Detect Remarks
     detectedColumns.remarks = headers.find(h => {
       const lower = h.toLowerCase();
       return lower.includes('remark') ||
@@ -511,12 +530,10 @@ export default function IndividualTransactionPDFs() {
       }
       
       setPreview(result);
-      setCurrentPage(1); // Reset to first page
+      setCurrentPage(1); 
       
-      // Detect all required columns
       const detectedCols = detectRequiredColumns(result.headers, result.data);
       
-      // Auto-detect RRN column
       const possibleRrnColumns = result.headers.filter(header => {
         const headerLower = header.toLowerCase();
         return headerLower.includes('rrn') || 
@@ -531,18 +548,15 @@ export default function IndividualTransactionPDFs() {
         setRrnColumn(possibleRrnColumns[0]);
       }
       
-      // Auto-detect UPI column
       const detectedUpiColumn = detectUpiColumn(result.headers, result.data);
       if (detectedUpiColumn) {
         setUpiColumn(detectedUpiColumn);
       }
       
-      // Auto-detect Amount column
       if (detectedCols.amount) {
         setAmountColumn(detectedCols.amount);
       }
       
-      // Log detected columns for debugging
       console.log('Detected columns:', detectedCols);
       
     } catch (error) {
@@ -553,7 +567,6 @@ export default function IndividualTransactionPDFs() {
     setLoading(false);
   };
 
-  // Fixed: Move this function definition before the generateProfessionalInvoiceHTML function
   const getFilenameFromRRN = (rowData) => {
     if (!rrnColumn || !rowData[rrnColumn]) {
       return `Invoice_${rowData._rowIndex}`;
@@ -573,13 +586,9 @@ export default function IndividualTransactionPDFs() {
       minute: '2-digit'
     });
 
-    // Get merchant-specific configuration
     const merchantInfo = getMerchantConfig(rowData);
-
-    // Detect all required columns
     const detectedCols = detectRequiredColumns(headers, [rowData]);
     
-    // Extract values using detected columns
     const transactionDateValue = detectedCols.transactionDate && rowData[detectedCols.transactionDate] ? 
       formatCellValue(rowData[detectedCols.transactionDate], detectedCols.transactionDate) : 
       currentDate.split(',')[0];
@@ -592,10 +601,8 @@ export default function IndividualTransactionPDFs() {
       formatCellValue(rowData[detectedCols.merchantName], detectedCols.merchantName) :
       (merchantColumn && rowData[merchantColumn] ? formatCellValue(rowData[merchantColumn], merchantColumn) : 'N/A');
     
-    // Updated amount calculation to prioritize manually selected column
     let amountValue = 0;
     if (amountColumn && rowData[amountColumn] !== undefined && rowData[amountColumn] !== null && rowData[amountColumn] !== '') {
-      // Handle both number and string values
       const rawValue = String(rowData[amountColumn]).replace(/[₹,\s]/g, ''); 
       amountValue = parseFloat(rawValue) || 0;
     } else if (detectedCols.amount && rowData[detectedCols.amount] !== undefined && rowData[detectedCols.amount] !== null && rowData[detectedCols.amount] !== '') {
@@ -618,11 +625,7 @@ export default function IndividualTransactionPDFs() {
     
     const dateTimeValue = `${transactionDateValue} ${transactionTimeValue}`;
     const upiIdValue = upiColumn && rowData[upiColumn] ? formatCellValue(rowData[upiColumn], upiColumn) : vpaValue;
-
-    // Use merchant-specific invoice prefix
     const invoiceNumber = `${merchantInfo.invoicePrefix}${String(rowIndex).padStart(3, '0')}`;
-
-    // Calculate filename
     const pdfFilename = getFilenameFromRRN(rowData);
 
     return `<!DOCTYPE html>
@@ -732,19 +735,19 @@ export default function IndividualTransactionPDFs() {
         .invoice-table {
             width: 100%;
             border-collapse: collapse;
-            border: 1px solid #9ca3af;
+            border: 1px solid #FFDA64;
             font-size: 0.7rem;
         }
         
         .invoice-table th,
         .invoice-table td {
-            border: 1px solid #9ca3af;
+            border: 1px solid #FFDA64;
             padding: 0.5rem;
             text-align: left;
         }
         
         .invoice-table th {
-            background-color: #dbeafe;
+            background-color: #FFDA64;
             font-weight: 600;
             font-size: 0.7rem;
         }
@@ -837,6 +840,53 @@ export default function IndividualTransactionPDFs() {
                 height: 100vh;
             }
             
+            
+        .print-button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .print-button {
+            background-color: #2563eb;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: background-color 0.2s ease;
+        }
+        
+        .print-button:hover {
+            background-color: #1d4ed8;
+        }
+        
+        @media print {
+            -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            
+            body {
+                background: white;
+                padding: 0;
+                font-size: 10px;
+                height: 100vh;
+                overflow: hidden;
+            }
+            
+            .container {
+                max-width: none;
+                padding: 0;
+                margin: 0;
+                height: 100vh;
+            }
+            
             .print-button-container {
                 display: none;
             }
@@ -858,7 +908,7 @@ export default function IndividualTransactionPDFs() {
             }
             
             .invoice-table th {
-                background-color: #dbeafe !important;
+                background-color: #FFDA64 !important;
                 color: #1f2937 !important;
                 font-weight: 600;
             }
@@ -1027,9 +1077,9 @@ export default function IndividualTransactionPDFs() {
     printWindow.document.write(htmlContent);
     printWindow.document.close();
     
-    // Don't automatically trigger print - let the user click "Print Invoice" button
+    
     printWindow.onload = function() {
-      // Window is ready, but we don't auto-print anymore
+      
       console.log('Invoice window opened successfully');
     };
   };
@@ -1452,19 +1502,20 @@ export default function IndividualTransactionPDFs() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         <div className="flex items-center">
                           <Building2 className="w-4 h-4 mr-2" />
-                          Merchant Column (optional)
+                          Merchant Column
                         </div>
                       </label>
                       <select
-                        value={merchantColumn}
-                        onChange={(e) => setMerchantColumn(e.target.value)}
-                        className="w-full px-4 py-3 bg-orange-50 border-2 border-orange-200 rounded-lg text-orange-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:shadow-md"
-                      >
-                        <option value="">Select merchant column (optional)</option>
-                        {preview.headers.filter(header => header !== '_rowIndex').map(header => (
-                          <option key={header} value={header}>{header}</option>
-                        ))}
-                      </select>
+  value={merchantColumn}
+  onChange={(e) => setMerchantColumn(e.target.value)}
+  required
+  className="w-full px-4 py-3 bg-orange-50 border-2 border-orange-200 rounded-lg text-orange-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:shadow-md"
+>
+  <option value="">Select merchant column </option>
+  {preview.headers.filter(header => header !== '_rowIndex').map(header => (
+    <option key={header} value={header}>{header}</option>
+  ))}
+</select>
                     </div>
 
                     {/* Amount Column Dropdown */}
