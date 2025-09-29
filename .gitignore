@@ -1,5 +1,4 @@
+# .gitignore
 node_modules/
-# Next.js build output
 .next/
-out/
-dist/
+.env.local
