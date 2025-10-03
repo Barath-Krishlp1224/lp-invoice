@@ -8,16 +8,20 @@
  * @returns {{companyName: string, address: string, invoicePrefix: string, termsAcronym: string}} The merchant configuration.
  */
 export const getMerchantConfig = (rowData, merchantColumn, customPrefixes) => {
+    // Split the address for better formatting (Line 1: Address, Line 2: GST)
+    const auxfordAddress = 'NO 15 11 CROSS POONGAVANAM GARDEN MANAVELY KARIKALAMBAKAM PONDICHERRY - 605007 IN<br/>GST: 34AAYCA4056H1ZD';
+    const jetpackAddress = 'No.195A Vinayagar koil St Eraiyur Tindivanam, Villupuram Tamil Nadu-604304 IN<br/>GST: 33AAFCJ9470R1ZS';
+
     const merchantConfig = {
         'auxford': {
             companyName: 'AUXFORD PRIVATE LIMITED',
-            address: 'NO 15 11 CROSS POONGAVANAM GARDEN MANAVELY KARIKALAMBAKAM PONDICHERRY - 605007 IN GST: 34AAYCA4056H1ZD',
+            address: auxfordAddress,
             invoicePrefix: customPrefixes.auxford || 'AUX-',
             termsAcronym: 'APL' 
         },
         'jetpack': {
             companyName: 'JETPACK PAMNETWORK PRIVATE LIMITED',
-            address: 'No.195A Vinayagar koil St Eraiyur Tindivanam, Villupuram Tamil Nadu-604304 IN GST:33AAFCJ9470R1ZS',
+            address: jetpackAddress,
             invoicePrefix: customPrefixes.jetpack || 'JET-',
             termsAcronym: 'JPPL' 
         }
@@ -43,6 +47,8 @@ export const getMerchantConfig = (rowData, merchantColumn, customPrefixes) => {
     // Default return if no specific match
     return merchantConfig[merchantName] || merchantConfig['jetpack'];
 };
+
+// -----------------------------------------------------------------------------
 
 /**
  * Attempts to detect required columns based on headers.
@@ -107,6 +113,8 @@ export const detectRequiredColumns = (headers) => {
     return detectedColumns;
 };
 
+// -----------------------------------------------------------------------------
+
 /**
  * Formats a cell value based on its inferred type (especially for currency and date).
  */
@@ -131,6 +139,8 @@ export const formatCellValue = (value, header) => {
 
     return String(value || '');
 };
+
+// -----------------------------------------------------------------------------
 
 /**
  * Generates the professional invoice HTML content for a single transaction.
@@ -195,88 +205,80 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
             background-color: #f3f4f6;
             padding: 0;
             margin: 0;
-            /* CRITICAL FIX: Base font size reduced */
             font-size: 10px; 
             min-height: 100vh;
         }
         
         .container {
             width: 100%; 
-            max-width: 210mm; 
+            max-width: 180mm; 
             margin: 0 auto; 
             padding: 0;
         }
         
         .invoice {
             background: white;
-            /* CRITICAL FIX: Reduced vertical padding to minimal */
-            padding: 5px 10px 5px 10px; 
+            padding: 5mm 10mm; 
             width: 100%;
-            min-height: 297mm;
+            min-height: 277mm; 
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         
         .header {
-            text-align: center;
-            /* CRITICAL FIX: Reduced margin */
-            margin-bottom: 5px;
+            margin-bottom: 8mm; 
         }
         
         .invoice-title {
             font-size: 24px; 
             font-weight: bold;
             color: #1f2937;
-            margin-bottom: 5px;
+            margin-bottom: 3mm; 
+            text-align: left; 
         }
         
         .logo-container {
             display: flex;
-            justify-content: center;
-            margin-bottom: 5px;
+            justify-content: flex-start; 
+            margin-bottom: 4mm;
         }
         
         .company-details {
-            max-width: 500px;
-            margin: 0 auto;
-            text-align: center; 
+            text-align: left; 
         }
         
         .company-name {
             font-weight: bold;
             color: #1f2937;
-            margin-bottom: 8px; 
+            margin-bottom: 2mm; 
             font-size: 14px;
         }
         
         .company-address {
-            font-size: 10px; /* Aligned with base font */
+            font-size: 10px; 
             color: #6b7280;
             line-height: 1.4; 
         }
         
         .main-content {
-            /* CRITICAL FIX: Removed margin */
             margin-bottom: 0px; 
         }
         
         .table-container {
-            /* CRITICAL FIX: Reduced margin */
-            margin-bottom: 8px; 
+            margin-bottom: 6mm;
             overflow-x: auto;
         }
         
         .invoice-table {
             width: 100%;
             border-collapse: collapse;
-            border: 1px solid #FFDA64;
-            font-size: 10px; /* Aligned with base font */
+            border: 1px solid black; 
+            font-size: 10px; 
         }
         
         .invoice-table th,
         .invoice-table td {
-            border: 1px solid #FFDA64;
-            /* CRITICAL FIX: Reduced vertical padding */
-            padding: 5px 8px; 
+            border: 1px solid black;
+            padding: 2.5mm 3mm; 
             text-align: left;
         }
         
@@ -304,44 +306,46 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
         }
         
         .terms {
-            margin-top: 15px; /* Reduced from 20px */
+            margin-top: 8mm;
             page-break-inside: avoid;
         }
         
         .terms h3 {
             font-weight: 600;
             color: #1f2937;
-            margin-bottom: 5px; /* Reduced from 10px */
-            font-size: 12px; /* Reduced from 13px */
+            margin-bottom: 3mm;
+            font-size: 12px; 
         }
         
         .terms-content {
-            font-size: 10px; /* Aligned with base font */
+            font-size: 6px; 
             color: #6b7280;
-            line-height: 1.4; /* Reduced line height */
+            line-height: 1.6;
         }
         
         .terms-content p {
-            /* CRITICAL FIX: Reduced vertical margin */
-            margin-bottom: 4px; 
+            margin-bottom: 2mm; 
         }
         
         @media print {
             body {
                 margin: 0;
                 padding: 0;
+                background: white;
             }
             
             .container {
                 padding: 0;
                 width: 100%;
                 max-width: none;
+                margin: 0;
             }
             
             .invoice {
                 box-shadow: none;
                 border-radius: 0;
-                padding: 0;
+                padding: 12mm 10mm;
+                min-height: 277mm;
             }
             
             @page {
@@ -373,8 +377,7 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
                         <img 
                             src="/logo.png" 
                             alt="Logo" 
-                            /* CRITICAL FIX: Reduced image size */
-                            style="width: 80px; height: auto; border-radius: 12px; object-fit: cover;"
+                            style="width: 75px; height: auto; border-radius: 12px; object-fit: cover;"
                         />
                     </div>
                 </div>
