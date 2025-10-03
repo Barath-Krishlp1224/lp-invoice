@@ -190,95 +190,78 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.4;
+            line-height: 1.3; 
             color: #374151;
-            background-color: white;
+            background-color: #f3f4f6;
             padding: 0;
-            font-size: 12px;
+            margin: 0;
+            /* CRITICAL FIX: Base font size reduced */
+            font-size: 10px; 
+            min-height: 100vh;
         }
         
         .container {
-            /* Ensures content aligns within a standard printable width */
-            max-width: 800px; 
+            width: 100%; 
+            max-width: 210mm; 
             margin: 0 auto; 
-            padding: 20px;
+            padding: 0;
         }
         
-        /* >>>>>>>>>>>>> CRITICAL CSS FIXES FOR SINGLE PAGE/ALIGNMENT <<<<<<<<<<<<< */
         .invoice {
             background: white;
-            padding: 1.5rem;
-            display: block; 
-            /* FIXED: Removed min-height: 297mm to prevent forced page breaks */
-            position: relative;
-            page-break-inside: avoid !important; 
-            border: 1px solid #e5e7eb; 
+            /* CRITICAL FIX: Reduced vertical padding to minimal */
+            padding: 5px 10px 5px 10px; 
+            width: 100%;
+            min-height: 297mm;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-
-        /* Ensure major sections don't cause trailing breaks */
-        .header, .main-content, .upper-section, .lower-section, .table-container {
-            page-break-after: avoid;
-            page-break-inside: avoid !important; /* Secondary assurance */
-        }
-        /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
         
         .header {
             text-align: center;
-            margin-bottom: 2rem;
-            flex-shrink: 0;
+            /* CRITICAL FIX: Reduced margin */
+            margin-bottom: 5px;
         }
         
         .invoice-title {
-            font-size: 1.25rem;
+            font-size: 24px; 
             font-weight: bold;
             color: #1f2937;
-            margin-bottom: 1rem;
+            margin-bottom: 5px;
         }
         
         .logo-container {
             display: flex;
             justify-content: center;
-            margin-bottom: 1rem;
+            margin-bottom: 5px;
         }
         
         .company-details {
-            max-width: 400px;
+            max-width: 500px;
             margin: 0 auto;
-            text-align: left;
+            text-align: center; 
         }
         
         .company-name {
             font-weight: bold;
             color: #1f2937;
-            margin-bottom: 0.25rem;
-            font-size: 0.9rem;
+            margin-bottom: 8px; 
+            font-size: 14px;
         }
         
         .company-address {
-            font-size: 0.7rem;
+            font-size: 10px; /* Aligned with base font */
             color: #6b7280;
-            line-height: 1.3;
+            line-height: 1.4; 
         }
         
         .main-content {
-            min-height: 0;
-        }
-        
-        .upper-section {
-            flex-shrink: 0;
-        }
-        
-        .middle-spacer {
-            display: none;
-        }
-        
-        .lower-section {
-            flex-shrink: 0;
-            page-break-inside: avoid !important;
+            /* CRITICAL FIX: Removed margin */
+            margin-bottom: 0px; 
         }
         
         .table-container {
-            margin-bottom: 1rem;
+            /* CRITICAL FIX: Reduced margin */
+            margin-bottom: 8px; 
             overflow-x: auto;
         }
         
@@ -286,13 +269,14 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
             width: 100%;
             border-collapse: collapse;
             border: 1px solid #FFDA64;
-            font-size: 0.7rem;
+            font-size: 10px; /* Aligned with base font */
         }
         
         .invoice-table th,
         .invoice-table td {
             border: 1px solid #FFDA64;
-            padding: 0.5rem;
+            /* CRITICAL FIX: Reduced vertical padding */
+            padding: 5px 8px; 
             text-align: left;
         }
         
@@ -300,11 +284,6 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
             background-color: #FFDA64 !important;
             color: #1f2937 !important;
             font-weight: 600;
-            font-size: 0.7rem;
-        }
-        
-        .invoice-table td {
-            font-size: 0.7rem;
         }
         
         .center {
@@ -325,82 +304,61 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
         }
         
         .terms {
-            /* FIXED: Reduced margin-top from 5rem to 1rem to save vertical space */
-            margin-top: 1rem; 
-            page-break-inside: avoid !important; 
+            margin-top: 15px; /* Reduced from 20px */
+            page-break-inside: avoid;
         }
         
         .terms h3 {
             font-weight: 600;
             color: #1f2937;
-            margin-bottom: 0.5rem;
-            font-size: 0.8rem;
+            margin-bottom: 5px; /* Reduced from 10px */
+            font-size: 12px; /* Reduced from 13px */
         }
         
         .terms-content {
-            font-size: 0.6rem;
+            font-size: 10px; /* Aligned with base font */
             color: #6b7280;
-            line-height: 1.3;
+            line-height: 1.4; /* Reduced line height */
         }
         
         .terms-content p {
-            margin-bottom: 0.2rem;
-        }
-        
-        /* Button Styling for the single PDF viewer */
-        .print-button-container {
-            display: flex !important;
-            justify-content: center;
-            margin-top: 3rem;
-            page-break-inside: avoid !important;
-        }
-        
-        .print-button {
-            display: inline-flex;
-            align-items: center;
-            padding: 10px 20px;
-            background-color: #1c7ed6; /* Blue color */
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s ease;
-        }
-        
-        .print-button:hover {
-            background-color: #1864ab; 
-        }
-
-        .print-button svg {
-            margin-right: 8px;
-        }
-        
-        @media screen, print {
-             .invoice-table th { background-color: #FFDA64 !important; }
-             .total-row { background-color: #f9fafb !important; }
-             .total-row td { background-color: #f9fafb !important; }
+            /* CRITICAL FIX: Reduced vertical margin */
+            margin-bottom: 4px; 
         }
         
         @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            
+            .container {
+                padding: 0;
+                width: 100%;
+                max-width: none;
+            }
+            
             .invoice {
                 box-shadow: none;
                 border-radius: 0;
-                padding: 0.5rem;
-                height: auto; 
-                display: block;
-                border: none !important;
+                padding: 0;
             }
-            /* Hide button when print dialog is open */
-            .print-button-container {
-                display: none !important;
-            }
+            
             @page {
                 size: A4 portrait;
-                /* FIXED: Reduced margin from 0.5in to 0.4in to gain vertical space */
-                margin: 0.4in; 
+                margin: 10mm;
+            }
+            
+            .invoice-table th {
+                background-color: #FFDA64 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .total-row {
+                background-color: #f9fafb !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
         }
     </style>
@@ -415,7 +373,8 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
                         <img 
                             src="/logo.png" 
                             alt="Logo" 
-                            style="width: 100px; height: 100px; border-radius: 12px; object-fit: cover;"
+                            /* CRITICAL FIX: Reduced image size */
+                            style="width: 80px; height: auto; border-radius: 12px; object-fit: cover;"
                         />
                     </div>
                 </div>
@@ -426,116 +385,71 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
             </div>
             
             <div class="main-content">
-                <div class="upper-section">
-                    <div class="table-container">
-                        <table class="invoice-table">
-                            <thead>
-                                <tr>
-                                    <th>Bill to</th>
-                                    <th>Transaction Date & Time</th>
-                                    <th>RRN No.</th>
-                                    <th>Invoice No.</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>${upiIdValue}</td>
-                                    <td>${transactionTimeValue}</td>
-                                    <td>${rrnValue}</td>
-                                    <td>${invoiceNumber}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="table-container">
-                        <table class="invoice-table">
-                            <thead>
-                                <tr>
-                                    <th>Sl No.</th>
-                                    <th>Description</th>
-                                    <th>Quantity</th>
-                                    <th>Unit Price</th>
-                                    <th>Gross Amount</th>
-                                    <th>Tax Amount</th>
-                                    <th>Net Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="center">1</td>
-                                    <td>Wallet loading</td>
-                                    <td class="center">1</td>
-                                    <td class="right">₹ ${formattedAmount}</td>
-                                    <td class="right">₹ ${formattedAmount}</td>
-                                    <td class="center">-</td>
-                                    <td class="right">₹ ${formattedAmount}</td>
-                                </tr>
-                                <tr class="total-row">
-                                    <td colspan="4" class="right total-label">Total</td>
-                                    <td class="right">₹ ${formattedAmount}</td>
-                                    <td class="center">0</td>
-                                    <td class="right">₹ ${formattedAmount}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="table-container">
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>Bill to</th>
+                                <th>Transaction Date & Time</th>
+                                <th>RRN No.</th>
+                                <th>Invoice No.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>${upiIdValue}</td>
+                                <td>${transactionTimeValue}</td>
+                                <td>${rrnValue}</td>
+                                <td>${invoiceNumber}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
                 
-                <div class="lower-section">
-                    <div class="terms">
-                        <h3>Terms</h3>
-                        <div class="terms-content">
-                            <p>1. By receiving this invoice, the user has paid the appropriate fees to ${termsAcronym} through Payment Gate and accepts the company's terms and conditions in connection with the transaction.</p>
-                            <p>2. All the invoices are raised against the UPI id through which the payment is collected</p>
-                            <p>3. This is computer generated invoice and doesn't require a seal and signature.</p>
-                        </div>
-                    </div>
+                <div class="table-container">
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>Sl No.</th>
+                                <th>Description</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Gross Amount</th>
+                                <th>Tax Amount</th>
+                                <th>Net Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="center">1</td>
+                                <td>Wallet loading</td>
+                                <td class="center">1</td>
+                                <td class="right">₹ ${formattedAmount}</td>
+                                <td class="right">₹ ${formattedAmount}</td>
+                                <td class="center">-</td>
+                                <td class="right">₹ ${formattedAmount}</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td colspan="4" class="right total-label">Total</td>
+                                <td class="right">₹ ${formattedAmount}</td>
+                                <td class="center">0</td>
+                                <td class="right">₹ ${formattedAmount}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
                 
-            </div>
-            
-            <div class="print-button-container">
-                <button onclick="downloadPDF()" class="print-button">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 17H15L12 14L9 17Z" fill="currentColor"/>
-                        <path d="M20 6H16V4C16 2.89 15.11 2 14 2H10C8.89 2 8 2.89 8 4V6H4C2.89 6 2 6.89 2 8V16C2 17.11 2.89 18 4 18H8V20C8 21.11 8.89 22 10 22H14C15.11 22 16 21.11 16 20V18H20C21.11 18 22 17.11 22 16V8C22 6.89 21.11 6 20 6ZM10 4H14V6H10V4ZM14 20H10V16H14V20ZM20 16H16V14H8V16H4V8H20V16Z" fill="currentColor"/>
-                    </svg>
-                    Print Invoice
-                </button>
+                <div class="terms">
+                    <h3>Terms</h3>
+                    <div class="terms-content">
+                        <p>1. By receiving this invoice, the user has paid the appropriate fees to ${termsAcronym} through Payment Gate and accepts the company's terms and conditions in connection with the transaction.</p>
+                        <p>2. All the invoices are raised against the UPI id through which the payment is collected</p>
+                        <p>3. This is computer generated invoice and doesn't require a seal and signature.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    
-    <script>
-        function downloadPDF() {
-            const filename = '${pdfFilename}.pdf';
-            
-            // Hide the button container before printing
-            const printButton = document.querySelector('.print-button-container');
-            const originalDisplay = printButton.style.display;
-            printButton.style.display = 'none';
-            
-            document.title = filename; 
-
-            window.print();
-            
-            // Restore the button after printing dialog is closed (with a small delay)
-            setTimeout(() => {
-                printButton.style.display = originalDisplay;
-            }, 1000);
-        }
-        
-        window.onload = function() {
-            document.addEventListener('keydown', function(e) {
-                // Ctrl+P / Cmd+P shortcut
-                if (e.ctrlKey && e.key === 'p' || e.metaKey && e.key === 'p') {
-                    e.preventDefault();
-                    downloadPDF();
-                }
-            });
-        }
-    </script>
 </body>
 </html>`;
 };

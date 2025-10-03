@@ -93,12 +93,12 @@ export default function IndividualTransactionPDFs() {
 
     const getFilenameFromRRN = (rowData) => {
         if (!rrnColumn || !rowData[rrnColumn]) {
-            return `Invoice_${rowData._rowIndex}`;
+            return `${rowData._rowIndex}`;
         }
 
         const rrnValue = String(rowData[rrnColumn]);
         const cleanFilename = rrnValue.replace(/[^a-zA-Z0-9_-]/g, '_');
-        return `Invoice_${cleanFilename}` || `Invoice_${rowData._rowIndex}`;
+        return `${cleanFilename}` || `${rowData._rowIndex}`;
     };
 
     const processFile = (selectedFile) => {
@@ -175,9 +175,9 @@ export default function IndividualTransactionPDFs() {
     
     // Helper function to create the isolated DOM element for PDF generation
     const createInvoiceElement = (htmlContent) => {
-        // FIX: Use the wrapper div itself as the source element
+        // Increased width slightly closer to A4 width (210mm) to prevent overflow
         const tempDiv = document.createElement('div');
-        tempDiv.style.width = '210mm'; 
+        tempDiv.style.width = '208mm'; 
         tempDiv.innerHTML = htmlContent;
         return tempDiv; 
     };
@@ -202,7 +202,7 @@ export default function IndividualTransactionPDFs() {
         setZipProgress(0);
         setError(null);
 
-        // FIX (Visibility): Create a temporary container that is visible to the renderer but invisible to the user
+        // Create a temporary container that is visible to the renderer but invisible to the user
         const tempContainer = document.createElement('div');
         tempContainer.style.position = 'fixed'; 
         tempContainer.style.top = '0';         
@@ -210,7 +210,8 @@ export default function IndividualTransactionPDFs() {
         tempContainer.style.zIndex = '-1000';   
         tempContainer.style.opacity = '0';      
         tempContainer.style.pointerEvents = 'none'; 
-        tempContainer.style.width = '210mm'; 
+        // Use the slightly increased width
+        tempContainer.style.width = '208mm'; 
         document.body.appendChild(tempContainer);
         
         try {
@@ -239,7 +240,8 @@ export default function IndividualTransactionPDFs() {
                 const pdfBlob = await window.html2pdf()
                     .from(element)
                     .set({
-                        margin: 10,
+                        // CRITICAL FIX: Minimal vertical margins
+                        margin: [1, 5, 1, 5], 
                         image: { type: 'jpeg', quality: 0.98 },
                         html2canvas: { 
                             scale: 2, 
@@ -247,9 +249,14 @@ export default function IndividualTransactionPDFs() {
                             allowTaint: true, 
                             useCORS: true 
                         },
-                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                        // Set pagebreak mode to 'auto' for better compatibility with complex CSS
-                        pagebreak: { mode: 'auto', before: '.invoice', avoid: ['.invoice-table', '.lower-section'] } 
+                        jsPDF: { 
+                            unit: 'mm', 
+                            format: 'a4', 
+                            orientation: 'portrait',
+                            compress: true
+                        },
+                        // CRITICAL FIX: Prevent page breaks
+                        pagebreak: { mode: 'none' } 
                     })
                     .output('blob');
 
@@ -844,7 +851,7 @@ export default function IndividualTransactionPDFs() {
                                                     </th>
                                                     {rrnColumn && (
                                                         <th className="px-6 py-4 text-left text-sm font-semibold text-blue-700 bg-blue-50 border-b border-blue-200 min-w-[10rem]">
-                                                            {rrnColumn} (PDF Name)
+                                                            {rrnColumn}
                                                         </th>
                                                     )}
                                                     {merchantColumn && (
