@@ -367,6 +367,7 @@ export default function IndividualTransactionPDFs() {
                 <source src="/1.mp4" type="video/mp4" />
                 <source src="your-video.webm" type="video/webm" />
             </video>
+            
             {/* Header with Logo */}
             <div className="container mx-auto px-8 py-5">
                 <div className="flex items-center justify-between">
@@ -411,18 +412,28 @@ export default function IndividualTransactionPDFs() {
 
             <div className="relative z-10 pb-20">
                 {/* Main Title Section */}
-                <div className="text-center mb-10">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg mb-4">
-                        <FileText className="w-8 h-8 text-white" />
-                    </div>
-                    <h2 className="text-4xl font-bold text-white mb-3">Lemonpay Invoice Generator</h2>
+                 <div className="text-center mb-10">
+                    <img
+                        src="/lemon.png" 
+                        alt="Lemonpay Logo"
+                        className="w-16 h-16 mx-auto mb-4 object-contain"
+                    />
+                    <h2
+                        className="text-4xl font-bold mb-3 text-white"
+                        style={{ fontFamily: "'Poppins', sans-serif" }} 
+                    >
+                        Lemonpay Invoice Generator
+                    </h2>
                 </div>
 
                 <div className="max-w-7xl mx-auto">
-                    <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                    {/* 🧊 GLACIER/FROSTED GLASS EFFECT APPLIED HERE 🧊 */}
+                    <div className="rounded-2xl shadow-2xl border border-white/40 overflow-hidden backdrop-blur-xl" 
+                         style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} 
+                    >
 
-                        {/* Upload Section */}
-                        <div className="p-8 bg-gradient-to-r from-blue-50 to-blue-100">
+                        {/* Upload Section - Adjusted bg to be slightly more opaque for contrast */}
+                        <div className="p-8 bg-white/20">
                             <div className="flex items-center space-x-3 mb-6">
                                 <div className="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-lg">
                                     <Upload className="w-5 h-5 text-white" />
@@ -522,9 +533,9 @@ export default function IndividualTransactionPDFs() {
                             )}
                         </div>
 
-                        {/* Column Selection Section with Simple Dropdowns */}
+                        {/* Column Selection Section - Adjusted bg and border */}
                         {preview && (
-                            <div className="border-t bg-white p-8">
+                            <div className="border-t border-white/50 bg-white/50 p-8">
 
                                 <h3 className="text-xl font-semibold text-gray-900 mb-6">Configure Invoice Settings</h3>
 
@@ -572,9 +583,9 @@ export default function IndividualTransactionPDFs() {
                                         </div>
                                     </div>
 
-                                    {/* Duplicates Display */}
+                                    {/* Duplicates Display - Adjusted bg to be mostly opaque for text */}
                                     {showDuplicates && duplicates.length > 0 && (
-                                        <div className="mt-6 bg-blue-50 rounded-lg border border-blue-200 p-4">
+                                        <div className="mt-6 bg-white/80 rounded-lg border border-blue-200 p-4">
                                             <h5 className="text-md font-semibold text-blue-800 mb-4">Found Duplicates:</h5>
                                             <div className="space-y-4 max-h-96 overflow-y-auto">
                                                 {duplicates.map((duplicate, index) => (
@@ -612,7 +623,7 @@ export default function IndividualTransactionPDFs() {
                                 </div>
 
 
-                                {/* Custom Prefix Editor */}
+                                {/* Custom Prefix Editor - Adjusted bg to be mostly opaque for text */}
                                 <div className="mb-8">
                                     <div className="flex items-center justify-between mb-4">
                                         <h4 className="text-lg font-medium text-gray-800 flex items-center">
@@ -633,7 +644,7 @@ export default function IndividualTransactionPDFs() {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {Object.entries(customPrefixes).map(([merchant, prefix]) => (
-                                            <div key={merchant} className="p-4 bg-white rounded-lg border-2 border-blue-200">
+                                            <div key={merchant} className="p-4 bg-white/80 rounded-lg border-2 border-blue-200">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <label className="text-sm font-semibold text-blue-800 capitalize">
                                                         {merchant} Prefix:
@@ -748,8 +759,8 @@ export default function IndividualTransactionPDFs() {
                                         </div>
                                     </div>
 
-                                    {/* Status Indicators */}
-                                    <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                    {/* Status Indicators - Adjusted bg to be mostly opaque for text */}
+                                    <div className="mt-6 p-4 bg-white/80 rounded-lg border border-gray-200">
                                         <div className="flex flex-wrap gap-4">
                                             <div className={`flex items-center px-3 py-1 rounded-full text-sm ${merchantColumn ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-500'}`}>
                                                 <div className={`w-2 h-2 rounded-full mr-2 ${merchantColumn ? 'bg-orange-500' : 'bg-gray-400'}`}></div>
@@ -794,7 +805,8 @@ export default function IndividualTransactionPDFs() {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                            {/* Adjusted bg to be mostly opaque for text */}
+                                            <div className="mt-3 p-3 bg-white/80 rounded-lg border border-purple-200">
                                                 <p className="text-sm text-purple-700 font-medium">
                                                     Preview: {invoicePrefix || '[PREFIX]'}001, {invoicePrefix || '[PREFIX]'}002, {invoicePrefix || '[PREFIX]'}003
                                                 </p>
@@ -831,9 +843,9 @@ export default function IndividualTransactionPDFs() {
                             </div>
                         )}
 
-                        {/* Data Preview Section with Pagination */}
+                        {/* Data Preview Section with Pagination - Adjusted bg and border */}
                         {preview && (
-                            <div className="border-t bg-gray-50 p-8">
+                            <div className="border-t border-white/50 bg-white/50 p-8">
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="text-xl font-semibold text-gray-900">Data Preview & Actions</h3>
                                     <div className="text-sm text-gray-600">
@@ -841,7 +853,8 @@ export default function IndividualTransactionPDFs() {
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                {/* Table Wrapper - Adjusted bg to be mostly opaque for readability */}
+                                <div className="bg-white/80 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full">
                                             <thead className="bg-gradient-to-r from-slate-100 to-gray-100">
@@ -997,9 +1010,9 @@ export default function IndividualTransactionPDFs() {
                             </div>
                         )}
 
-                        {/* Progress Bar */}
+                        {/* Progress Bar - Adjusted bg and border */}
                         {generatingZip && (
-                            <div className="border-t bg-gradient-to-r from-purple-50 to-pink-50 p-8">
+                            <div className="border-t border-white/50 bg-white/50 p-8">
                                 <div className="text-center mb-4">
                                     <h4 className="text-lg font-semibold text-purple-800">
                                         Creating PDF ZIP File...
