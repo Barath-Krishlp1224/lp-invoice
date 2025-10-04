@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, Edit3, DollarSign, Copy, Search } from 'lucide-react';
+// Import the new SplitText component (assuming it's available)
+import SplitText from './SplitText'; 
 import useDataProcessing from '../hooks/useDataProcessing';
 import { generateProfessionalInvoiceHTML, formatCellValue, getMerchantConfig } from '../utils/invoiceConfig'; 
 
@@ -46,6 +48,9 @@ export default function IndividualTransactionPDFs() {
         scriptPdf.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
         scriptPdf.async = true;
         document.head.appendChild(scriptPdf);
+        
+        // GSAP and ScrollTrigger are assumed to be loaded via the 'gsap' imports 
+        // in the SplitText component environment.
 
         return () => {
             if (document.head.contains(scriptZip)) {
@@ -312,6 +317,8 @@ export default function IndividualTransactionPDFs() {
 
     return (
         <div className="relative min-h-screen overflow-hidden">
+            {/* REMOVED the CSS typing animation for GSAP implementation */}
+            
             <div className="absolute top-0 left-0 w-full h-full object-cover">
                 <video
                     autoPlay
@@ -359,25 +366,29 @@ export default function IndividualTransactionPDFs() {
                 </div>
 
            <div className="text-center mb-10">
-                    <img
-                        src="/lemon.png" 
-                        alt="Lemonpay Logo"
-                        className="w-16 h-16 mx-auto mb-4 object-contain"
-                    />
-                 <h2
-    className="text-4xl font-bold mb-3 text-white relative inline-block pb-2"
-    style={{ fontFamily: "'Poppins', sans-serif" }} 
->
-    Lemonpay Invoice Generator
-    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-1 bg-emerald-400 rounded-full animate-[expandCenter_1.5s_ease-in-out_forwards]"></span>
-</h2>
-
-<style jsx>{`
-    @keyframes expandCenter {
-        0% { width: 0%; }
-        100% { width: 100%; }
-    }
-`}</style>
+                    {/* UPDATED: Using SplitText component for the title */}
+                    <div className="flex items-center justify-center mb-4 space-x-4">
+                        <img
+                            src="/lemon.png" 
+                            alt="Lemonpay Logo"
+                            className="w-16 h-16 object-contain"
+                        />
+                         <SplitText
+                            text="Lemonpay Invoice Generator"
+                            tag="h2"
+                            className="text-4xl font-bold text-white"
+                            // Typing effect settings
+                            splitType="chars"
+                            delay={30} // Stagger in ms (0.03s per character = fast typing)
+                            duration={0.3} // Duration for each character animation
+                            from={{ opacity: 0 }}
+                            to={{ opacity: 1 }}
+                            textAlign="left" // Required for SplitText on chars to look right
+                            rootMargin="-100px"
+                            threshold={0.1}
+                        />
+                    </div>
+                    {/* END SPLITTEXT IMPLEMENTATION */}
                 </div>
 
                 <div className="max-w-7xl mx-auto">
@@ -440,6 +451,9 @@ export default function IndividualTransactionPDFs() {
                                             <p className="text-2xl font-semibold text-gray-900 mb-2">Drop your data file here</p>
                                             <p className="text-gray-600 text-lg">or click to browse from your computer</p>
                                         </div>
+                                           <p className="text-xm text-white-700">
+                                            Supports Excel files (.xlsx, .xls) and CSV files
+                                        </p>
                                         <input
                                             ref={fileInputRef}
                                             type="file"
@@ -455,9 +469,7 @@ export default function IndividualTransactionPDFs() {
                                             <Upload className="w-5 h-5 mr-2" />
                                             Choose File
                                         </label>
-                                        <p className="text-sm text-gray-500">
-                                            Supports Excel files (.xlsx, .xls) and CSV files
-                                        </p>
+                                     
                                     </div>
                                 )}
                             </div>
