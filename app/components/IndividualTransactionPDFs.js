@@ -9,7 +9,6 @@ export default function IndividualTransactionPDFs() {
     const [file, setFile] = useState(null);
     const [invoicePrefix, setInvoicePrefix] = useState('INV-');
     const fileInputRef = useRef(null);
-    const [dateTime, setDateTime] = useState('');
     const [showDuplicates, setShowDuplicates] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -22,7 +21,6 @@ export default function IndividualTransactionPDFs() {
         jetpack: 'JET-'
     });
 
-    // Use custom hook for data logic
     const {
         loading,
         preview,
@@ -38,15 +36,12 @@ export default function IndividualTransactionPDFs() {
         goToNextPage, goToPreviousPage, goToPage,
     } = useDataProcessing(file);
 
-    // Load JSZip and html2pdf libraries from CDN
     useEffect(() => {
-        // JSZip library
         const scriptZip = document.createElement('script');
         scriptZip.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
         scriptZip.async = true;
         document.head.appendChild(scriptZip);
 
-        // html2pdf library
         const scriptPdf = document.createElement('script');
         scriptPdf.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
         scriptPdf.async = true;
@@ -60,28 +55,6 @@ export default function IndividualTransactionPDFs() {
                 document.head.removeChild(scriptPdf);
             }
         };
-    }, []);
-
-    // Date/Time ticker
-    useEffect(() => {
-        const updateDateTime = () => {
-            const now = new Date();
-            const options = {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true
-            };
-            setDateTime(now.toLocaleDateString('en-US', options));
-        };
-
-        updateDateTime();
-        const interval = setInterval(updateDateTime, 1000);
-        return () => clearInterval(interval);
     }, []);
 
     const handleCustomPrefixChange = (merchant, newPrefix) => {
@@ -163,7 +136,6 @@ export default function IndividualTransactionPDFs() {
     };
 
     const downloadAsPDF = (htmlContent) => {
-        // This is kept for the single PDF preview action, which opens a print dialog
         const printWindow = window.open('', '_blank');
         if (printWindow) {
             printWindow.document.write(htmlContent);
@@ -173,17 +145,13 @@ export default function IndividualTransactionPDFs() {
         }
     };
     
-    // Helper function to create the isolated DOM element for PDF generation
     const createInvoiceElement = (htmlContent) => {
-        // Increased width slightly closer to A4 width (210mm) to prevent overflow
         const tempDiv = document.createElement('div');
         tempDiv.style.width = '208mm'; 
         tempDiv.innerHTML = htmlContent;
         return tempDiv; 
     };
 
-
-    // THE BATCH ZIP DOWNLOAD FUNCTION (FINAL FIXES)
     const downloadAllAsZip = async () => {
         if (!preview || !preview.data.length) return;
 
@@ -192,7 +160,6 @@ export default function IndividualTransactionPDFs() {
             return;
         }
 
-        // Check if libraries are loaded
         if (!window.JSZip || !window.html2pdf) {
             setError('PDF or ZIP library not fully loaded. Please wait a moment and try again.');
             return;
@@ -202,7 +169,6 @@ export default function IndividualTransactionPDFs() {
         setZipProgress(0);
         setError(null);
 
-        // Create a temporary container that is visible to the renderer but invisible to the user
         const tempContainer = document.createElement('div');
         tempContainer.style.position = 'fixed'; 
         tempContainer.style.top = '0';         
@@ -210,7 +176,6 @@ export default function IndividualTransactionPDFs() {
         tempContainer.style.zIndex = '-1000';   
         tempContainer.style.opacity = '0';      
         tempContainer.style.pointerEvents = 'none'; 
-        // Use the slightly increased width
         tempContainer.style.width = '208mm'; 
         document.body.appendChild(tempContainer);
         
@@ -232,15 +197,12 @@ export default function IndividualTransactionPDFs() {
                 );
                 const filename = getFilenameFromRRN(rowData);
 
-                // Create temporary element and attach it to the hidden container
                 const element = createInvoiceElement(htmlContent);
                 tempContainer.appendChild(element);
 
-                // Generate PDF using html2pdf.js with enhanced settings
                 const pdfBlob = await window.html2pdf()
                     .from(element)
                     .set({
-                        // CRITICAL FIX: Minimal vertical margins
                         margin: [1, 5, 1, 5], 
                         image: { type: 'jpeg', quality: 0.98 },
                         html2canvas: { 
@@ -255,26 +217,21 @@ export default function IndividualTransactionPDFs() {
                             orientation: 'portrait',
                             compress: true
                         },
-                        // CRITICAL FIX: Prevent page breaks
                         pagebreak: { mode: 'none' } 
                     })
                     .output('blob');
 
-                // Add the PDF Blob to the ZIP file
                 zip.file(`${filename}.pdf`, pdfBlob);
 
-                // Clean up the element immediately after processing
                 tempContainer.removeChild(element);
 
                 setZipProgress(Math.round(((i + 1) / totalRows) * 100));
 
-                // Yield control for large batches
                 if (i % 5 === 0) {
                     await new Promise(resolve => setTimeout(resolve, 0));
                 }
             }
 
-            // Generate and download the final ZIP
             const zipBlob = await zip.generateAsync({
                 type: 'blob',
                 compression: 'DEFLATE',
@@ -296,7 +253,6 @@ export default function IndividualTransactionPDFs() {
             console.error('ZIP/PDF generation error:', err);
             setError('Error creating ZIP file: ' + err.message);
         } finally {
-            // Ensure the temporary container is removed even if an error occurred
             if (document.body.contains(tempContainer)) {
                 document.body.removeChild(tempContainer);
             }
@@ -356,83 +312,79 @@ export default function IndividualTransactionPDFs() {
 
     return (
         <div className="relative min-h-screen overflow-hidden">
-            {/* Background Video */}
-            <video
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="absolute top-0 left-0 w-full h-full object-cover"
-            >
-                <source src="/1.mp4" type="video/mp4" />
-                <source src="your-video.webm" type="video/webm" />
-            </video>
+            <div className="absolute top-0 left-0 w-full h-full object-cover">
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                    style={{ opacity: 0.4 }}
+                >
+                    <source src="/1.mp4" type="video/mp4" />
+                    <source src="your-video.webm" type="video/webm" />
+                </video>
+                <div className="absolute inset-0 bg-black" style={{ opacity: 0.2 }}></div>
+            </div>
             
-            {/* Header with Logo */}
-            <div className="container mx-auto px-8 py-5">
-                <div className="flex items-center justify-between">
-                    {/* Enhanced Logo Section */}
-                    <div className="flex items-center space-x-4">
+            <div className="relative z-10 pb-20">
+                <div className="container mx-auto px-8 py-5">
+                    <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                            <div className="relative">
-                                <div className="absolute inset-0 rounded-xl blur-xl" style={{ backgroundColor: '#fff200', opacity: 0.2 }}></div>
+                            <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-4">
+    {/* Wrap the logo element with an anchor tag to trigger a page refresh */}
+    <a href="/" className="cursor-pointer"> 
+        <div className="relative">
+            <div className="absolute inset-0 rounded-xl blur-xl" style={{background: 'linear-gradient(135deg, #fff200, #4DA881)', opacity: 0.2,}}></div>
 
-                                <img
-                                    src="/logo hd.png"
-                                    alt="Professional Logo"
-                                    className="h-14 w-auto object-contain filter hover:brightness-110 transition-all duration-300"
-                                />
-
+            <img
+                src="/logo hd.png"
+                alt="Professional Logo"
+                className="h-14 w-auto object-contain filter hover:brightness-110 transition-all duration-300"
+            />
+        </div>
+    </a>
+</div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Professional Date & Time Display */}
-                    <div className="flex items-center space-x-6">
-                        <div className="flex items-center space-x-3 bg-black/30 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/20">
-                            <div className="text-right">
-                                <div className="text-sm font-semibold text-white tracking-wide drop-shadow-lg">
-                                    {dateTime.split(',')[0]}, {dateTime.split(',')[1]}
-                                </div>
-                                <div className="text-xs text-yellow-300 font-mono tracking-wider drop-shadow-lg">
-                                    {dateTime.split(',')[2] || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-                                </div>
+                        <div className="md:hidden flex items-center">
+                            <div className="text-xs text-gray-600 font-medium">
+                                {new Date().toLocaleDateString()}
                             </div>
                         </div>
-                    </div>
-
-                    {/* Mobile Menu Indicator */}
-                    <div className="md:hidden flex items-center">
-                        <div className="text-xs text-gray-600 font-medium">
-                            {new Date().toLocaleDateString()}
-                        </div>
+                        <div className="hidden md:block w-40"></div>
                     </div>
                 </div>
-            </div>
 
-            <div className="relative z-10 pb-20">
-                {/* Main Title Section */}
-                 <div className="text-center mb-10">
+           <div className="text-center mb-10">
                     <img
                         src="/lemon.png" 
                         alt="Lemonpay Logo"
                         className="w-16 h-16 mx-auto mb-4 object-contain"
                     />
-                    <h2
-                        className="text-4xl font-bold mb-3 text-white"
-                        style={{ fontFamily: "'Poppins', sans-serif" }} 
-                    >
-                        Lemonpay Invoice Generator
-                    </h2>
+                 <h2
+    className="text-4xl font-bold mb-3 text-white relative inline-block pb-2"
+    style={{ fontFamily: "'Poppins', sans-serif" }} 
+>
+    Lemonpay Invoice Generator
+    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-1 bg-emerald-400 rounded-full animate-[expandCenter_1.5s_ease-in-out_forwards]"></span>
+</h2>
+
+<style jsx>{`
+    @keyframes expandCenter {
+        0% { width: 0%; }
+        100% { width: 100%; }
+    }
+`}</style>
                 </div>
 
                 <div className="max-w-7xl mx-auto">
-                    {/* 🧊 GLACIER/FROSTED GLASS EFFECT APPLIED HERE 🧊 */}
                     <div className="rounded-2xl shadow-2xl border border-white/40 overflow-hidden backdrop-blur-xl" 
                          style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} 
                     >
 
-                        {/* Upload Section - Adjusted bg to be slightly more opaque for contrast */}
                         <div className="p-8 bg-white/20">
                             <div className="flex items-center space-x-3 mb-6">
                                 <div className="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-lg">
@@ -533,13 +485,11 @@ export default function IndividualTransactionPDFs() {
                             )}
                         </div>
 
-                        {/* Column Selection Section - Adjusted bg and border */}
                         {preview && (
                             <div className="border-t border-white/50 bg-white/50 p-8">
 
                                 <h3 className="text-xl font-semibold text-gray-900 mb-6">Configure Invoice Settings</h3>
 
-                                {/* Duplicate Detection Section */}
                                 <div className="mb-8">
                                     <h4 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
                                         <Copy className="w-5 h-5 text-blue-500 mr-3" />
@@ -583,7 +533,6 @@ export default function IndividualTransactionPDFs() {
                                         </div>
                                     </div>
 
-                                    {/* Duplicates Display - Adjusted bg to be mostly opaque for text */}
                                     {showDuplicates && duplicates.length > 0 && (
                                         <div className="mt-6 bg-white/80 rounded-lg border border-blue-200 p-4">
                                             <h5 className="text-md font-semibold text-blue-800 mb-4">Found Duplicates:</h5>
@@ -623,7 +572,6 @@ export default function IndividualTransactionPDFs() {
                                 </div>
 
 
-                                {/* Custom Prefix Editor - Adjusted bg to be mostly opaque for text */}
                                 <div className="mb-8">
                                     <div className="flex items-center justify-between mb-4">
                                         <h4 className="text-lg font-medium text-gray-800 flex items-center">
@@ -656,7 +604,7 @@ export default function IndividualTransactionPDFs() {
                                                         value={prefix}
                                                         onChange={(e) => handleCustomPrefixChange(merchant, e.target.value)}
                                                         placeholder={`Enter ${merchant} prefix`}
-                                                        className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm font-mono focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                                                        className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm font-mono focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none text-black"
                                                     />
                                                 ) : (
                                                     <div className="text-sm font-mono text-blue-700 bg-blue-50 px-3 py-2 rounded-md">
@@ -670,7 +618,6 @@ export default function IndividualTransactionPDFs() {
                                 </div>
 
 
-                                {/* Simple Dropdowns Section */}
                                 <div className="mb-8">
                                     <h4 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
                                         <div className="w-3 h-3 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full mr-3"></div>
@@ -678,7 +625,6 @@ export default function IndividualTransactionPDFs() {
                                     </h4>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {/* Merchant Column Dropdown */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 <div className="flex items-center">
@@ -698,7 +644,6 @@ export default function IndividualTransactionPDFs() {
                                             </select>
                                         </div>
 
-                                        {/* Amount Column Dropdown */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 <div className="flex items-center">
@@ -718,7 +663,6 @@ export default function IndividualTransactionPDFs() {
                                             </select>
                                         </div>
 
-                                        {/* RRN Column Dropdown */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 <div className="flex items-center">
@@ -738,7 +682,6 @@ export default function IndividualTransactionPDFs() {
                                             </select>
                                         </div>
 
-                                        {/* UPI Column Dropdown */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 <div className="flex items-center">
@@ -759,7 +702,6 @@ export default function IndividualTransactionPDFs() {
                                         </div>
                                     </div>
 
-                                    {/* Status Indicators - Adjusted bg to be mostly opaque for text */}
                                     <div className="mt-6 p-4 bg-white/80 rounded-lg border border-gray-200">
                                         <div className="flex flex-wrap gap-4">
                                             <div className={`flex items-center px-3 py-1 rounded-full text-sm ${merchantColumn ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-500'}`}>
@@ -782,7 +724,6 @@ export default function IndividualTransactionPDFs() {
                                     </div>
                                 </div>
 
-                                {/* Invoice Prefix Input - Only show if no merchant column selected */}
                                 {!merchantColumn && (
                                     <div className="mb-8">
                                         <h4 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
@@ -796,7 +737,7 @@ export default function IndividualTransactionPDFs() {
                                                     value={invoicePrefix}
                                                     onChange={(e) => setInvoicePrefix(e.target.value)}
                                                     placeholder="Enter prefix (e.g., INV-, JETPACK-)"
-                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-base font-medium focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none transition-all bg-white text-black"
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-base font-medium focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none transition-all bg-white text-black placeholder:text-gray-500"
                                                     autoComplete="off"
                                                 />
                                                 {invoicePrefix && (
@@ -805,7 +746,6 @@ export default function IndividualTransactionPDFs() {
                                                     </div>
                                                 )}
                                             </div>
-                                            {/* Adjusted bg to be mostly opaque for text */}
                                             <div className="mt-3 p-3 bg-white/80 rounded-lg border border-purple-200">
                                                 <p className="text-sm text-purple-700 font-medium">
                                                     Preview: {invoicePrefix || '[PREFIX]'}001, {invoicePrefix || '[PREFIX]'}002, {invoicePrefix || '[PREFIX]'}003
@@ -820,7 +760,6 @@ export default function IndividualTransactionPDFs() {
                                     </div>
                                 )}
 
-                                {/* Generate All PDFs as ZIP Button (Single Action) */}
                                 {isReadyToGenerate && (
                                     <div className="mt-8 flex justify-center">
                                         <button
@@ -843,7 +782,6 @@ export default function IndividualTransactionPDFs() {
                             </div>
                         )}
 
-                        {/* Data Preview Section with Pagination - Adjusted bg and border */}
                         {preview && (
                             <div className="border-t border-white/50 bg-white/50 p-8">
                                 <div className="flex items-center justify-between mb-6">
@@ -853,7 +791,6 @@ export default function IndividualTransactionPDFs() {
                                     </div>
                                 </div>
 
-                                {/* Table Wrapper - Adjusted bg to be mostly opaque for readability */}
                                 <div className="bg-white/80 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full">
@@ -952,7 +889,6 @@ export default function IndividualTransactionPDFs() {
                                     </div>
                                 </div>
 
-                                {/* Pagination Controls - Moved Below Table */}
                                 <div className="mt-6 flex items-center justify-between">
                                     <div className="text-sm text-gray-600">
                                         Page {currentPage} of {totalPages} • Total: <span className="font-semibold text-gray-900">{preview.data.length} rows</span>
@@ -1010,7 +946,6 @@ export default function IndividualTransactionPDFs() {
                             </div>
                         )}
 
-                        {/* Progress Bar - Adjusted bg and border */}
                         {generatingZip && (
                             <div className="border-t border-white/50 bg-white/50 p-8">
                                 <div className="text-center mb-4">
