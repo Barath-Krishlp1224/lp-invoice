@@ -339,20 +339,20 @@ export default function IndividualTransactionPDFs() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-4">
-      <div className="flex items-center space-x-4">
-    {/* Wrap the logo element with an anchor tag to trigger a page refresh */}
-    <a href="/" className="cursor-pointer"> 
-        <div className="relative">
-            <div className="absolute inset-0 rounded-xl blur-xl" style={{background: 'linear-gradient(135deg, #fff200, #4DA881)', opacity: 0.2,}}></div>
+                              <div className="flex items-center space-x-4">
+                            {/* Wrap the logo element with an anchor tag to trigger a page refresh */}
+                            <a href="/" className="cursor-pointer"> 
+                                <div className="relative">
+                                    <div className="absolute inset-0 rounded-xl blur-xl" style={{background: 'linear-gradient(135deg, #fff200, #4DA881)', opacity: 0.2,}}></div>
 
-            <img
-                src="/logo hd.png"
-                alt="Professional Logo"
-                className="h-14 w-auto object-contain filter hover:brightness-110 transition-all duration-300"
-            />
-        </div>
-    </a>
-</div>
+                                    <img
+                                        src="/logo hd.png"
+                                        alt="Professional Logo"
+                                        className="h-14 w-auto object-contain filter hover:brightness-110 transition-all duration-300"
+                                    />
+                                </div>
+                            </a>
+                        </div>
                             </div>
                         </div>
 
@@ -401,7 +401,7 @@ export default function IndividualTransactionPDFs() {
                                 <div className="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-lg">
                                     <Upload className="w-5 h-5 text-white" />
                                 </div>
-                                <h3 className="text-2xl font-semibold text-gray-900">Upload Your Data File</h3>
+                                <h3 className="text-2xl font-semibold text-black">Upload Your Data File</h3>
                             </div>
 
                             {error && (
@@ -444,12 +444,13 @@ export default function IndividualTransactionPDFs() {
                                     </div>
                                 ) : (
                                     <div className="space-y-6">
-                                        <div className="text-gray-400">
+                                        {/* 🎯 CHANGE 1: Upload Icon in Drag-and-Drop Area to black */}
+                                        <div className="text-black"> 
                                             <Upload className="mx-auto h-16 w-16" />
                                         </div>
                                         <div>
-                                            <p className="text-2xl font-semibold text-gray-900 mb-2">Drop your data file here</p>
-                                            <p className="text-gray-600 text-lg">or click to browse from your computer</p>
+                                            <p className="text-2xl font-semibold text-black mb-2">Drop your data file here</p>
+                                            <p className="text-black text-lg">or click to browse from your computer</p>
                                         </div>
                                            <p className="text-xm text-white-700">
                                             Supports Excel files (.xlsx, .xls) and CSV files
@@ -466,7 +467,8 @@ export default function IndividualTransactionPDFs() {
                                             htmlFor="file-upload"
                                             className="inline-flex items-center px-8 py-3 border border-transparent text-base font-semibold rounded-xl shadow-lg text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 cursor-pointer transition-all transform hover:scale-105"
                                         >
-                                            <Upload className="w-5 h-5 mr-2" />
+                                            {/* 🎯 CHANGE 2: Upload Icon in "Choose File" button to black */}
+                                            <Upload className="w-5 h-5 mr-2 text-white" />
                                             Choose File
                                         </label>
                                      
@@ -982,4 +984,4 @@ export default function IndividualTransactionPDFs() {
             </div>
         </div>
     );
-}
+} 
