@@ -17,13 +17,13 @@ export const getMerchantConfig = (rowData, merchantColumn, customPrefixes) => {
             companyName: 'AUXFORD PRIVATE LIMITED',
             address: auxfordAddress,
             invoicePrefix: customPrefixes.auxford || 'AUX-',
-            termsAcronym: 'APL' 
+            termsAcronym: 'APL'
         },
         'jetpack': {
             companyName: 'JETPACK PAMNETWORK PRIVATE LIMITED',
             address: jetpackAddress,
             invoicePrefix: customPrefixes.jetpack || 'JET-',
-            termsAcronym: 'JPPL' 
+            termsAcronym: 'JPPL'
         }
     };
 
@@ -33,7 +33,7 @@ export const getMerchantConfig = (rowData, merchantColumn, customPrefixes) => {
             ...merchantConfig['jetpack'],
             invoicePrefix: customPrefixes.default || merchantConfig['jetpack'].invoicePrefix,
             termsAcronym: merchantConfig['jetpack'].termsAcronym
-        }; 
+        };
     }
 
     const merchantName = String(rowData[merchantColumn]).toLowerCase().trim();
@@ -233,7 +233,7 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
             font-weight: bold;
             color: #1f2937;
             margin-bottom: 3mm; 
-            text-align: left; 
+            text-align: center;
         }
         
         .logo-container {
@@ -275,17 +275,20 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
             font-size: 10px; 
         }
         
-        .invoice-table th,
+        .invoice-table th {
+            border: 1px solid black;
+            padding: 2.5mm 3mm; 
+            text-align: left;
+            background-color: #FFDA64 !important;
+            color: #1f2937 !important;
+            font-weight: 600;
+        }
+        
         .invoice-table td {
             border: 1px solid black;
             padding: 2.5mm 3mm; 
             text-align: left;
-        }
-        
-        .invoice-table th {
-            background-color: #FFDA64 !important;
-            color: #1f2937 !important;
-            font-weight: 600;
+            font-weight: normal;
         }
         
         .center {
@@ -298,7 +301,10 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
         
         .total-row {
             background-color: #f9fafb !important;
-            font-weight: 600;
+        }
+        
+        .total-row td {
+            font-weight: bold !important;
         }
         
         .total-label {
@@ -306,7 +312,7 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
         }
         
         .terms {
-            margin-top: 8mm;
+            margin-top: 10mm;
             page-break-inside: avoid;
         }
         
@@ -318,9 +324,11 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
         }
         
         .terms-content {
-            font-size: 6px; 
-            color: #6b7280;
-            line-height: 1.6;
+            font-size: 10px; 
+            color: #6b7280; 
+            font-weight: 300; 
+            line-height: 1.2; 
+            letter-spacing: 0.4px; 
         }
         
         .terms-content p {
@@ -364,6 +372,10 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
+            
+            .total-row td {
+                font-weight: bold !important;
+            }
         }
     </style>
 </head>
@@ -383,7 +395,9 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
                 </div>
                 <div class="company-details">
                     <h2 class="company-name">${merchantInfo.companyName}</h2>
-                    <p class="company-address">${merchantInfo.address}</p>
+                    <p class="company-address">
+                        ${merchantInfo.address.replace('<br/>', '<br/>').split('<br/>').join('<br/>')} 
+                    </p>
                 </div>
             </div>
             
