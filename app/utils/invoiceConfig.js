@@ -1,14 +1,18 @@
-// ../utils/invoiceConfig.js
+/**
+ * Utility functions for generating professional invoice HTML and configurations.
+ */
+
+// -----------------------------------------------------------------------------
+// CONFIGURATION AND UTILITIES
+// -----------------------------------------------------------------------------
 
 /**
  * Retrieves the merchant-specific configuration based on the row data.
  * @param {object} rowData - The current transaction row data.
  * @param {string} merchantColumn - The name of the column containing the merchant name.
- * @param {object} customPrefixes - The user-defined custom prefixes.
- * @returns {{companyName: string, address: string, invoicePrefix: string, termsAcronym: string}} The merchant configuration.
+ * @returns {{companyName: string, address: string, termsAcronym: string}} The merchant configuration.
  */
-export const getMerchantConfig = (rowData, merchantColumn, customPrefixes) => {
-    // Split the address for better formatting (Line 1: Address, Line 2: GST)
+export const getMerchantConfig = (rowData, merchantColumn) => {
     const auxfordAddress = 'NO 15 11 CROSS POONGAVANAM GARDEN MANAVELY KARIKALAMBAKAM PONDICHERRY - 605007 IN<br/>GST: 34AAYCA4056H1ZD';
     const jetpackAddress = 'No.195A Vinayagar koil St Eraiyur Tindivanam, Villupuram Tamil Nadu-604304 IN<br/>GST: 33AAFCJ9470R1ZS';
 
@@ -16,22 +20,18 @@ export const getMerchantConfig = (rowData, merchantColumn, customPrefixes) => {
         'auxford': {
             companyName: 'AUXFORD PRIVATE LIMITED',
             address: auxfordAddress,
-            invoicePrefix: customPrefixes.auxford || 'AUX-',
             termsAcronym: 'APL'
         },
         'jetpack': {
             companyName: 'JETPACK PAMNETWORK PRIVATE LIMITED',
             address: jetpackAddress,
-            invoicePrefix: customPrefixes.jetpack || 'JET-',
             termsAcronym: 'JPPL'
         }
     };
 
     if (!merchantColumn || !rowData[merchantColumn]) {
-        // Default (Jetpack) logic
         return {
             ...merchantConfig['jetpack'],
-            invoicePrefix: customPrefixes.default || merchantConfig['jetpack'].invoicePrefix,
             termsAcronym: merchantConfig['jetpack'].termsAcronym
         };
     }
@@ -44,7 +44,6 @@ export const getMerchantConfig = (rowData, merchantColumn, customPrefixes) => {
         return merchantConfig['jetpack'];
     }
 
-    // Default return if no specific match
     return merchantConfig[merchantName] || merchantConfig['jetpack'];
 };
 
@@ -141,11 +140,30 @@ export const formatCellValue = (value, header) => {
 };
 
 // -----------------------------------------------------------------------------
+// INVOICE GENERATION WITH INVOICE NUMBERS
+// -----------------------------------------------------------------------------
 
 /**
  * Generates the professional invoice HTML content for a single transaction.
+ * @param {object} rowData - The current transaction row data.
+ * @param {string[]} headers - The list of column headers.
+ * @param {number|string|null} invoiceNumber - The dynamically generated or set invoice number.
+ * @param {string} rrnColumn - The RRN column name.
+ * @param {string} upiColumn - The UPI column name.
+ * @param {string} merchantColumn - The Merchant column name.
+ * @param {string} amountColumn - The Amount column name.
+ * @param {object} customPrefixes - Custom prefix/suffix for invoice number (currently unused, but kept for future).
  */
-export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnColumn, upiColumn, merchantColumn, amountColumn, customPrefixes) => {
+export const generateProfessionalInvoiceHTML = (
+    rowData,
+    headers,
+    invoiceNumber,
+    rrnColumn,
+    upiColumn,
+    merchantColumn,
+    amountColumn,
+    customPrefixes 
+) => {
     const currentDate = new Date().toLocaleDateString('en-IN', {
         year: 'numeric',
         month: '2-digit',
@@ -154,8 +172,11 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
         minute: '2-digit'
     });
 
-    const merchantInfo = getMerchantConfig(rowData, merchantColumn, customPrefixes);
+    const merchantInfo = getMerchantConfig(rowData, merchantColumn);
     const detectedCols = detectRequiredColumns(headers);
+
+    // Prepare Invoice Number - use provided number or default to '-'
+    const invoiceNumberToDisplay = invoiceNumber ? String(invoiceNumber) : '-';
 
     const transactionDateValue = detectedCols.transactionDate && rowData[detectedCols.transactionDate] ?
         formatCellValue(rowData[detectedCols.transactionDate], detectedCols.transactionDate).split(' ')[0] :
@@ -180,9 +201,6 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
 
     const rrnValue = rrnColumn && rowData[rrnColumn] ? formatCellValue(rowData[rrnColumn], rrnColumn) : 'N/A';
 
-    const invoiceNumber = `${merchantInfo.invoicePrefix}${String(rowIndex).padStart(3, '0')}`;
-    const pdfFilename = rrnColumn && rowData[rrnColumn] ? `Invoice_${String(rowData[rrnColumn]).replace(/[^a-zA-Z0-9_-]/g, '_')}` : `Invoice_${rowIndex}`;
-
     const termsAcronym = merchantInfo.termsAcronym;
 
     return `<!DOCTYPE html>
@@ -190,7 +208,7 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${rrnValue}</title>
+    <title>Invoice ${invoiceNumberToDisplay} - ${rrnValue}</title>
     <style>
         * {
             margin: 0;
@@ -206,7 +224,7 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
             padding: 0;
             margin: 0;
             font-size: 10px; 
-            min-height: 100vh;
+            min-height: 10vh;
         }
         
         .container {
@@ -229,7 +247,7 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
         }
         
         .invoice-title {
-            font-size: 24px; 
+            font-size: 16px; 
             font-weight: bold;
             color: #1f2937;
             margin-bottom: 3mm; 
@@ -396,7 +414,7 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
                 <div class="company-details">
                     <h2 class="company-name">${merchantInfo.companyName}</h2>
                     <p class="company-address">
-                        ${merchantInfo.address.replace('<br/>', '<br/>').split('<br/>').join('<br/>')} 
+                        ${merchantInfo.address.replace(/<br\/>/g, '<br/>')}
                     </p>
                 </div>
             </div>
@@ -408,16 +426,31 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
                             <tr>
                                 <th>Bill to</th>
                                 <th>Transaction Date & Time</th>
-                                <th>RRN No.</th>
-                                <th>Invoice No.</th>
+                                <th>Wallet Load Date & Time</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td>${upiIdValue}</td>
-                                <td>${transactionTimeValue}</td>
-                                <td>${rrnValue}</td>
-                                <td>${invoiceNumber}</td>
+                                <td>${transactionDateValue} ${transactionTimeValue}</td>
+                                <td>${transactionDateValue} ${transactionTimeValue}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="table-container">
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th style="text-align: left;">RRN No.</th>
+                                <th style="text-align: left;">Invoice No.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="text-align: left;">${rrnValue}</td>
+                                <td style="text-align: left;">${invoiceNumberToDisplay}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -440,7 +473,7 @@ export const generateProfessionalInvoiceHTML = (rowData, headers, rowIndex, rrnC
                             <tr>
                                 <td class="center">1</td>
                                 <td>Wallet loading</td>
-                                <td class="center">1</td>
+                                <td class="right">1</td>
                                 <td class="right">₹ ${formattedAmount}</td>
                                 <td class="right">₹ ${formattedAmount}</td>
                                 <td class="center">-</td>
