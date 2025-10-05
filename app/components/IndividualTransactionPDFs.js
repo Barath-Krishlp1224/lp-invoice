@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, DollarSign, Copy, Search, Tag } from 'lucide-react';
+import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, DollarSign, Copy, Search, Tag, Eye } from 'lucide-react'; // Added Eye icon
 import SplitText from './SplitText';
 import useDataProcessing from '../hooks/useDataProcessing';
 import { generateProfessionalInvoiceHTML, formatCellValue, getMerchantConfig } from '../utils/invoiceConfig';
@@ -14,6 +14,7 @@ export default function IndividualTransactionPDFs() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [generatingZip, setGeneratingZip] = useState(false);
+    const [isViewingInTabs, setIsViewingInTabs] = useState(false);
     const [zipProgress, setZipProgress] = useState(0);
     const [jetpackInvoiceStart, setJetpackInvoiceStart] = useState('');
     const [auxfordInvoiceStart, setAuxfordInvoiceStart] = useState('');
@@ -152,10 +153,18 @@ export default function IndividualTransactionPDFs() {
                 <html>
                 <head>
                     <title>${filename}</title>
+                    <style>
+                        /* Add any necessary print styles here for the generated HTML */
+                        @media print {
+                            @page { size: A4; margin: 0; }
+                            body { margin: 0; }
+                        }
+                    </style>
                 </head>
                 <body>
                     ${htmlContent}
                     <script>
+                        // Wait for content to render, then print
                         setTimeout(() => {
                             window.print();
                             window.close();
@@ -169,6 +178,82 @@ export default function IndividualTransactionPDFs() {
             setError('Could not open print dialog. Please disable pop-up blockers.');
         }
     };
+    
+    // NEW FUNCTION: View all PDFs in separate tabs
+    const viewAllInTabs = () => {
+        if (!preview || !preview.data.length) return;
+        if (!rrnColumn || !upiColumn || !amountColumn) {
+            setError('Please select all required columns.');
+            return;
+        }
+
+        setIsViewingInTabs(true);
+        setError(null);
+
+        let jetpackInvoiceCounter = parseInt(jetpackInvoiceStart, 10) || 1;
+        let auxfordInvoiceCounter = parseInt(auxfordInvoiceStart, 10) || 1;
+
+        try {
+            preview.data.forEach((rowData, i) => {
+                const merchantName = rowData[merchantColumn] ? String(rowData[merchantColumn]).toLowerCase() : '';
+                let currentInvoiceNumber = null;
+                
+                // Re-calculate invoice number based on cumulative count *up to this row* for this button as well
+                const actualRowIndex = i;
+                if (merchantName.includes('jetpack')) {
+                    currentInvoiceNumber = parseInt(jetpackInvoiceStart) + preview.data.slice(0, actualRowIndex + 1).filter(r => String(r[merchantColumn] || '').toLowerCase().includes('jetpack')).length - 1;
+                } else if (merchantName.includes('auxford')) {
+                    currentInvoiceNumber = parseInt(auxfordInvoiceStart) + preview.data.slice(0, actualRowIndex + 1).filter(r => String(r[merchantColumn] || '').toLowerCase().includes('auxford')).length - 1;
+                }
+
+                const htmlContent = generateProfessionalInvoiceHTML(
+                    rowData,
+                    preview.headers,
+                    currentInvoiceNumber,
+                    rrnColumn,
+                    upiColumn,
+                    merchantColumn,
+                    amountColumn,
+                    null
+                );
+                
+                const filename = getFilenameFromRRN(rowData);
+                
+                // Use a standard window.open and write the HTML. This is much faster for a view-only action.
+                // The browser's PDF viewer/print dialog can then be used by the user.
+                const newWindow = window.open('about:blank', `invoice-${i}`, 'width=800,height=600');
+                if (newWindow) {
+                    newWindow.document.write(`
+                        <html>
+                        <head>
+                            <title>${filename}.pdf</title>
+                            <style>
+                                @media print {
+                                    @page { size: A4; margin: 0; }
+                                    body { margin: 0; }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            ${htmlContent}
+                        </body>
+                        </html>
+                    `);
+                    newWindow.document.close();
+                }
+            });
+            
+            // Note: Pop-up blockers might prevent this from opening all tabs successfully.
+            // The user may need to explicitly allow pop-ups for your site.
+            alert(`Attempting to open ${preview.data.length} invoices in new tabs. Please ensure pop-up blockers are disabled.`);
+        } catch (err) {
+            console.error('View in Tabs error:', err);
+            setError('Error viewing invoices: ' + err.message);
+        } finally {
+            setIsViewingInTabs(false);
+        }
+    };
+    // END NEW FUNCTION
 
     const createInvoiceElement = (htmlContent) => {
         const tempDiv = document.createElement('div');
@@ -203,9 +288,9 @@ export default function IndividualTransactionPDFs() {
         tempContainer.style.pointerEvents = 'none';
         tempContainer.style.width = '208mm';
         document.body.appendChild(tempContainer);
-
-        let jetpackInvoiceCounter = parseInt(jetpackInvoiceStart, 10) || 1;
-        let auxfordInvoiceCounter = parseInt(auxfordInvoiceStart, 10) || 1;
+        
+        // Counters will be managed by the calculateInvoiceNumber function when it's called
+        // for each row in the loop, ensuring correct incremental number generation.
 
         try {
             const zip = new window.JSZip();
@@ -213,14 +298,8 @@ export default function IndividualTransactionPDFs() {
 
             for (let i = 0; i < totalRows; i++) {
                 const rowData = preview.data[i];
-                const merchantName = rowData[merchantColumn] ? String(rowData[merchantColumn]).toLowerCase() : '';
-
-                let currentInvoiceNumber = null;
-                if (merchantName.includes('jetpack')) {
-                    currentInvoiceNumber = jetpackInvoiceCounter++;
-                } else if (merchantName.includes('auxford')) {
-                    currentInvoiceNumber = auxfordInvoiceCounter++;
-                }
+                const actualRowIndex = i;
+                const currentInvoiceNumber = calculateInvoiceNumber(actualRowIndex); // Use the existing calculation logic
 
                 const htmlContent = generateProfessionalInvoiceHTML(
                     rowData,
@@ -553,7 +632,7 @@ export default function IndividualTransactionPDFs() {
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 <div className="flex items-center">
-                                                    <DollarSign className="w-4 h-4 mr-2" />Amount Column (required)
+                                                    ₹ Amount Column (required)
                                                 </div>
                                             </label>
                                             <select value={amountColumn} onChange={(e) => setAmountColumn(e.target.value)} className="w-full px-4 py-3 bg-green-50 border-2 border-green-200 rounded-lg text-green-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:shadow-md">
@@ -613,8 +692,19 @@ export default function IndividualTransactionPDFs() {
                                 </div>
 
                                 {isReadyToGenerate && (
-                                    <div className="mt-8 flex justify-center">
-                                        <button onClick={downloadAllAsZip} disabled={generatingZip} className="inline-flex items-center px-10 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 rounded-xl font-bold text-lg shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none">
+                                    <div className="mt-8 flex justify-center space-x-6">
+                                        {/* NEW VIEW BUTTON */}
+                                        <button onClick={viewAllInTabs} disabled={isViewingInTabs || generatingZip} className="inline-flex items-center px-10 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 rounded-xl font-bold text-lg shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none">
+                                            <Eye className="w-6 h-6 mr-3" />
+                                            {isViewingInTabs ? (
+                                                `Opening ${preview.data.length} Tabs...`
+                                            ) : (
+                                                'View All Invoices in Tabs'
+                                            )}
+                                        </button>
+                                        {/* END NEW VIEW BUTTON */}
+
+                                        <button onClick={downloadAllAsZip} disabled={generatingZip || isViewingInTabs} className="inline-flex items-center px-10 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 rounded-xl font-bold text-lg shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none">
                                             <Download className="w-6 h-6 mr-3" />
                                             {generatingZip ? (
                                                 <>
