@@ -274,7 +274,8 @@ export const generateProfessionalInvoiceHTML = (
         .company-address {
             font-size: 10px; 
             color: #6b7280;
-            line-height: 1.4; 
+            line-height: 1.4;
+            font-weight: 600;
         }
         
         .main-content {
@@ -296,7 +297,7 @@ export const generateProfessionalInvoiceHTML = (
         .invoice-table th {
             border: 1px solid black;
             padding: 2.5mm 3mm; 
-            text-align: left;
+            text-align: center;
             background-color: #FFDA64 !important;
             color: #1f2937 !important;
             font-weight: 600;
@@ -305,7 +306,7 @@ export const generateProfessionalInvoiceHTML = (
         .invoice-table td {
             border: 1px solid black;
             padding: 2.5mm 3mm; 
-            text-align: left;
+            text-align: center;
             font-weight: normal;
         }
         
@@ -344,7 +345,7 @@ export const generateProfessionalInvoiceHTML = (
         .terms-content {
             font-size: 10px; 
             color: #6b7280; 
-            font-weight: 300; 
+            font-weight: 600;
             line-height: 1.2; 
             letter-spacing: 0.4px; 
         }
@@ -431,9 +432,9 @@ export const generateProfessionalInvoiceHTML = (
                         </thead>
                         <tbody>
                             <tr>
-                                <td>${upiIdValue}</td>
-                                <td>${transactionDateValue} ${transactionTimeValue}</td>
-                                <td>${transactionDateValue} ${transactionTimeValue}</td>
+                                <td class="center">${upiIdValue}</td>
+                                <td class="center">${transactionTimeValue}</td>
+                                <td class="center">${transactionTimeValue}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -443,14 +444,14 @@ export const generateProfessionalInvoiceHTML = (
                     <table class="invoice-table">
                         <thead>
                             <tr>
-                                <th style="text-align: left;">RRN No.</th>
-                                <th style="text-align: left;">Invoice No.</th>
+                                <th>RRN No.</th>
+                                <th>Invoice No.</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td style="text-align: left;">${rrnValue}</td>
-                                <td style="text-align: left;">${invoiceNumberToDisplay}</td>
+                                <td class="center">${rrnValue}</td>
+                                <td class="center">${invoiceNumberToDisplay}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -472,18 +473,18 @@ export const generateProfessionalInvoiceHTML = (
                         <tbody>
                             <tr>
                                 <td class="center">1</td>
-                                <td>Wallet loading</td>
-                                <td class="right">1</td>
-                                <td class="right">₹ ${formattedAmount}</td>
-                                <td class="right">₹ ${formattedAmount}</td>
+                                <td class="center">Wallet loading</td>
+                                <td class="center">1</td>
+                                <td class="center">₹ ${formattedAmount}</td>
+                                <td class="center">₹ ${formattedAmount}</td>
                                 <td class="center">-</td>
-                                <td class="right">₹ ${formattedAmount}</td>
+                                <td class="center">₹ ${formattedAmount}</td>
                             </tr>
                             <tr class="total-row">
-                                <td colspan="4" class="right total-label">Total</td>
-                                <td class="right">₹ ${formattedAmount}</td>
+                                <td colspan="4" class="center total-label">Total</td>
+                                <td class="center">₹ ${formattedAmount}</td>
                                 <td class="center">0</td>
-                                <td class="right">₹ ${formattedAmount}</td>
+                                <td class="center">₹ ${formattedAmount}</td>
                             </tr>
                         </tbody>
                     </table>

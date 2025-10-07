@@ -19,6 +19,7 @@ export default function IndividualTransactionPDFs() {
     const [zipProgress, setZipProgress] = useState(0);
     const [jetpackInvoiceStart, setJetpackInvoiceStart] = useState('');
     const [auxfordInvoiceStart, setAuxfordInvoiceStart] = useState('');
+    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
     const {
         loading,
@@ -34,6 +35,20 @@ export default function IndividualTransactionPDFs() {
         previewData,
         goToNextPage, goToPreviousPage, goToPage,
     } = useDataProcessing(file);
+
+    // Toast auto-hide effect
+    useEffect(() => {
+        if (toast.show) {
+            const timer = setTimeout(() => {
+                setToast({ ...toast, show: false });
+            }, 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast.show]);
+
+    const showToast = (message, type = 'success') => {
+        setToast({ show: true, message, type });
+    };
 
     useEffect(() => {
         // Dynamically load JSZip for ZIP creation
@@ -251,10 +266,8 @@ export default function IndividualTransactionPDFs() {
                 }
             });
             
-            // Inform the user about potential pop-up blocking
-            setTimeout(() => {
-                alert(`Attempting to open ${preview.data.length} invoices in new tabs. Please ensure pop-up blockers are disabled.`);
-            }, 500);
+            // Show toast instead of alert
+            showToast(`Opening ${preview.data.length} invoices in new tabs. Please ensure pop-up blockers are disabled.`, 'info');
 
         } catch (err) {
             console.error('View in Tabs error:', err);
@@ -380,7 +393,7 @@ export default function IndividualTransactionPDFs() {
             document.body.removeChild(link);
             URL.revokeObjectURL(url); // Clean up the URL object
 
-            alert(`Successfully created ZIP file with ${totalRows} PDF invoices!`);
+            showToast(`Successfully created ZIP file with ${totalRows} PDF invoices!`, 'success');
         } catch (err) {
             console.error('ZIP/PDF generation error:', err);
             setError('Error creating ZIP file: ' + err.message);
@@ -451,15 +464,37 @@ export default function IndividualTransactionPDFs() {
 
     return (
         <div className="relative min-h-screen overflow-hidden bg-black">
-            {/* 1. Import the font
-                2. Apply the font to all elements using the universal selector '*' 
-                This ensures the 'M PLUS Rounded 1c' style is applied globally.
-            */}
+            {/* Toast Notification */}
+            {toast.show && (
+                <div className="fixed top-6 right-6 z-50 animate-[slideIn_0.3s_ease-out]">
+                    <div className={`flex items-center gap-3 px-6 py-4 rounded-full shadow-2xl border-2 ${
+                        toast.type === 'success' ? 'bg-green-500 border-green-400' : 
+                        toast.type === 'error' ? 'bg-red-500 border-red-400' : 
+                        'bg-blue-500 border-blue-400'
+                    }`}>
+                        {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-white" />}
+                        {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-white" />}
+                        {toast.type === 'info' && <FileText className="w-5 h-5 text-white" />}
+                        <p className="text-white font-medium text-sm">{toast.message}</p>
+                    </div>
+                </div>
+            )}
+
             <style>
                 {`
                     @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c&display=swap');
                     * {
                         font-family: 'M PLUS Rounded 1c', sans-serif !important;
+                    }
+                    @keyframes slideIn {
+                        from {
+                            transform: translateX(100%);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: translateX(0);
+                            opacity: 1;
+                        }
                     }
                 `}
             </style>
@@ -467,7 +502,6 @@ export default function IndividualTransactionPDFs() {
             {/* Background video and overlay */}
             <div className="absolute top-0 left-0 w-full h-full object-cover">
                 <video autoPlay loop muted playsInline className="w-full h-full object-cover" style={{ opacity: 0.1 }}>
-                    {/* Ensure this path is correct for your setup */}
                     <source src="/1.mp4" type="video/mp4" />
                 </video>
             </div>
@@ -477,7 +511,6 @@ export default function IndividualTransactionPDFs() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                             <a href="/" className="cursor-pointer">
-                                {/* Ensure this path is correct for your setup */}
                                 <img src="/logo hd.png" alt="Professional Logo" className="h-60 w-60 mt-[-80px] object-contain hover:opacity-90 transition-opacity" />
                             </a>
                         </div>
@@ -487,7 +520,6 @@ export default function IndividualTransactionPDFs() {
                 {/* Title block */}
                 <div className="text-center mt-[-30px]"> 
                     <div className="flex items-center justify-center mb-3 space-x-3">
-                        {/* Ensure this path is correct for your setup */}
                         <img src="/lemon.png" alt="Lemonpay Logo" className="w-12 h-12 object-contain" />
                         <SplitText text="Lemonpay Invoice Generator..." tag="h2" className="text-3xl font-bold text-white" splitType="chars" delay={30} duration={0.3} from={{ opacity: 0 }} to={{ opacity: 1 }} textAlign="left" rootMargin="-100px" threshold={0.1} />
                     </div>
@@ -498,7 +530,6 @@ export default function IndividualTransactionPDFs() {
                     <div className="rounded-lg shadow-lg border border-gray-200 overflow-hidden bg-white w-full">
                         <div className="p-6">
                             <div className="flex items-center space-x-2 mb-4">
-                                {/* Icon color changed to green-600 */}
                                 <Upload className="w-5 h-5 text-green-600" />
                                 <h3 className="text-lg font-semibold text-gray-900">Upload Your Data File</h3>
                             </div>
@@ -512,11 +543,9 @@ export default function IndividualTransactionPDFs() {
                                 </div>
                             )}
 
-                            {/* Drag-and-drop area with green-themed styles */}
                             <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${file ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-green-400 hover:bg-gray-50'}`} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={handleDrop}>
                                 {file ? (
                                     <div className="space-y-3">
-                                        {/* Icon color changed to green-600 */}
                                         <CheckCircle className="mx-auto h-12 w-12 text-green-600" />
                                         <div>
                                             <p className="text-base font-semibold text-gray-900">{file.name}</p>
@@ -533,7 +562,6 @@ export default function IndividualTransactionPDFs() {
                                         </div>
                                         <p className="text-xs text-gray-500">Supports Excel (.xlsx, .xls) and CSV files</p>
                                         <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChange} className="hidden" id="file-upload" />
-                                        {/* Button background changed to green-600/700 */}
                                         <label htmlFor="file-upload" className="inline-flex items-center px-6 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 cursor-pointer transition-colors">
                                             <Upload className="w-4 h-4 mr-2" />Choose File
                                         </label>
@@ -543,7 +571,6 @@ export default function IndividualTransactionPDFs() {
 
                             {file && (
                                 <div className="mt-4 flex justify-center">
-                                    {/* Button background changed to green-600/700 */}
                                     <button onClick={previewData} disabled={loading || isProcessing} className="inline-flex items-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                         {loading || isProcessing ? (
                                             <>
@@ -566,7 +593,6 @@ export default function IndividualTransactionPDFs() {
 
                                 <div className="mb-4 p-4 bg-white rounded-lg border border-gray-200">
                                     <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                                        {/* Icon color changed to green-600 */}
                                         <Tag className="w-4 h-4 text-green-600 mr-2" />Starting Invoice Numbers
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -574,14 +600,12 @@ export default function IndividualTransactionPDFs() {
                                             <label htmlFor="jetpack-invoice-start" className="block text-xs font-medium text-gray-700 mb-1">
                                                 Jetpack Merchant
                                             </label>
-                                            {/* Focus ring changed to green-500 */}
                                             <input id="jetpack-invoice-start" type="number" min="1" value={jetpackInvoiceStart} onChange={(e) => setJetpackInvoiceStart(e.target.value)} placeholder="e.g., 101" className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                                         </div>
                                         <div>
                                             <label htmlFor="auxford-invoice-start" className="block text-xs font-medium text-gray-700 mb-1">
                                                 Auxford Merchant
                                             </label>
-                                            {/* Focus ring changed to green-500 */}
                                             <input id="auxford-invoice-start" type="number" min="1" value={auxfordInvoiceStart} onChange={(e) => setAuxfordInvoiceStart(e.target.value)} placeholder="e.g., 5001" className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                                         </div>
                                     </div>
@@ -589,7 +613,6 @@ export default function IndividualTransactionPDFs() {
 
                                 <div className="mb-4">
                                     <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                                        {/* Icon color changed to green-600 */}
                                         <Copy className="w-4 h-4 text-green-600 mr-2" />Duplicate Detection
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -597,7 +620,6 @@ export default function IndividualTransactionPDFs() {
                                             <label className="block text-xs font-medium text-gray-700 mb-1">
                                                 Column to Check
                                             </label>
-                                            {/* Focus ring changed to green-500 */}
                                             <select value={duplicateColumn} onChange={(e) => setDuplicateColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select column</option>
                                                 {preview.headers.filter(header => header !== '_rowIndex').map(header => (
@@ -622,7 +644,6 @@ export default function IndividualTransactionPDFs() {
                                                         <div key={index} className="bg-gray-50 rounded-lg border border-gray-200 p-3">
                                                             <div className="flex items-center justify-between mb-2">
                                                                 <h6 className="font-medium text-sm text-gray-900">"{duplicate.value}"</h6>
-                                                                {/* Pill color changed to green-100/700 */}
                                                                 <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">{duplicate.count} times</span>
                                                             </div>
                                                             <div className="space-y-1">
@@ -645,10 +666,8 @@ export default function IndividualTransactionPDFs() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                                         <div>
                                             <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                {/* Icon color changed to green-600 */}
                                                 <Building2 className="w-3 h-3 inline mr-1 text-green-600" />Merchant (Optional)
                                             </label>
-                                            {/* Focus ring changed to green-500 */}
                                             <select value={merchantColumn} onChange={(e) => setMerchantColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
                                                 {preview.headers.filter(header => header !== '_rowIndex').map(header => (
@@ -660,7 +679,6 @@ export default function IndividualTransactionPDFs() {
                                             <label className="block text-xs font-medium text-gray-700 mb-1">
                                                 <DollarSign className="w-3 h-3 inline mr-1" />Amount *
                                             </label>
-                                            {/* Focus ring changed to green-500 */}
                                             <select value={amountColumn} onChange={(e) => setAmountColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
                                                 {preview.headers.filter(header => header !== '_rowIndex').map(header => (
@@ -672,7 +690,6 @@ export default function IndividualTransactionPDFs() {
                                             <label className="block text-xs font-medium text-gray-700 mb-1">
                                                 <Hash className="w-3 h-3 inline mr-1" />RRN *
                                             </label>
-                                            {/* Focus ring changed to green-500 */}
                                             <select value={rrnColumn} onChange={(e) => setRrnColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
                                                 {preview.headers.filter(header => header !== '_rowIndex').map(header => (
@@ -684,7 +701,6 @@ export default function IndividualTransactionPDFs() {
                                             <label className="block text-xs font-medium text-gray-700 mb-1">
                                                 <FileText className="w-3 h-3 inline mr-1" />UPI ID *
                                             </label>
-                                            {/* Focus ring changed to green-500 */}
                                             <select value={upiColumn} onChange={(e) => setUpiColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
                                                 {preview.headers.filter(header => header !== '_rowIndex').map(header => (
@@ -695,7 +711,6 @@ export default function IndividualTransactionPDFs() {
                                     </div>
                                     <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
                                         <div className="flex flex-wrap gap-2">
-                                            {/* Status pill colors changed to green */}
                                             <div className={`flex items-center px-2 py-1 rounded text-xs ${merchantColumn ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                                                 <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${merchantColumn ? 'bg-green-600' : 'bg-gray-400'}`}></div>
                                                 Merchant: {merchantColumn || 'Not set'}
@@ -718,13 +733,11 @@ export default function IndividualTransactionPDFs() {
 
                                 {isReadyToGenerate && (
                                     <div className="mt-4 flex justify-center gap-3">
-                                        {/* Button background changed to green-600/700 */}
                                         <button onClick={viewAllInTabs} disabled={isViewingInTabs || generatingZip} className="inline-flex items-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                             <Eye className="w-4 h-4 mr-2" />
                                             {isViewingInTabs ? `Opening ${preview.data.length} Tabs...` : 'View All in Tabs'}
                                         </button>
 
-                                        {/* Button background changed to green-600/700 */}
                                         <button onClick={downloadAllAsZip} disabled={generatingZip || isViewingInTabs} className="inline-flex items-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                             <Download className="w-4 h-4 mr-2" />
                                             {generatingZip ? (
@@ -816,7 +829,6 @@ export default function IndividualTransactionPDFs() {
                                                             </td>
                                                             <td className="px-4 py-2 text-center">
                                                                 {isReadyToGenerate ? (
-                                                                    /* Button background changed to green-600/700 */
                                                                     <button onClick={() => generateSinglePDF(index)} className="inline-flex items-center px-3 py-1 bg-green-600 text-white hover:bg-green-700 rounded text-xs font-medium transition-colors">
                                                                         <Download className="w-3 h-3 mr-1" />Generate
                                                                     </button>
@@ -839,7 +851,6 @@ export default function IndividualTransactionPDFs() {
                                             <ChevronLeft className="w-3 h-3 mr-1" />Previous
                                         </button>
                                         <div className="flex items-center gap-1">
-                                            {/* Logic for smart pagination button display */}
                                             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                                 let pageNumber;
                                                 if (totalPages <= 5) {
@@ -852,7 +863,6 @@ export default function IndividualTransactionPDFs() {
                                                     pageNumber = currentPage - 2 + i;
                                                 }
                                                 return (
-                                                    /* Active pagination button changed to green-600 */
                                                     <button key={pageNumber} onClick={() => goToPage(pageNumber)} className={`px-2 py-1 text-xs font-medium rounded transition-colors ${currentPage === pageNumber ? 'bg-green-600 text-white' : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'}`}>
                                                         {pageNumber}
                                                     </button>
@@ -875,7 +885,6 @@ export default function IndividualTransactionPDFs() {
                                 </div>
                                 <div className="flex items-center justify-center gap-3">
                                     <div className="flex-1 max-w-md bg-gray-200 rounded-full h-2">
-                                        {/* Progress bar color changed to green-600 */}
                                         <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${zipProgress}%` }}></div>
                                     </div>
                                     <div className="text-sm font-semibold text-gray-900 min-w-[3rem]">{zipProgress}%</div>
