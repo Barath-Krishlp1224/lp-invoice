@@ -95,13 +95,34 @@ export default function IndividualTransactionPDFs() {
                 const m = r[merchantColumn] ? String(r[merchantColumn]).toLowerCase() : '';
                 return m.includes('jetpack');
             });
-            return parseInt(jetpackInvoiceStart) + jetpackRows.length - 1;
+            
+            // Extract numeric part from the starting number
+            const numericMatch = jetpackInvoiceStart.match(/\d+/);
+            const prefix = jetpackInvoiceStart.replace(/\d+/g, '');
+            
+            if (numericMatch) {
+                const startNum = parseInt(numericMatch[0]);
+                const newNum = startNum + jetpackRows.length - 1;
+                return prefix + newNum;
+            }
+            return jetpackInvoiceStart;
+            
         } else if (merchantName.includes('auxford') && auxfordInvoiceStart) {
             const auxfordRows = preview.data.slice(0, rowIndex + 1).filter(r => {
                 const m = r[merchantColumn] ? String(r[merchantColumn]).toLowerCase() : '';
                 return m.includes('auxford');
             });
-            return parseInt(auxfordInvoiceStart) + auxfordRows.length - 1;
+            
+            // Extract numeric part from the starting number
+            const numericMatch = auxfordInvoiceStart.match(/\d+/);
+            const prefix = auxfordInvoiceStart.replace(/\d+/g, '');
+            
+            if (numericMatch) {
+                const startNum = parseInt(numericMatch[0]);
+                const newNum = startNum + auxfordRows.length - 1;
+                return prefix + newNum;
+            }
+            return auxfordInvoiceStart;
         }
         
         return null;
@@ -224,9 +245,25 @@ export default function IndividualTransactionPDFs() {
                 // Calculate invoice number based on merchant type and starting number
                 if (merchantColumn) {
                     if (merchantName.includes('jetpack') && jetpackInvoiceStart) {
-                        currentInvoiceNumber = parseInt(jetpackInvoiceStart) + preview.data.slice(0, actualRowIndex + 1).filter(r => String(r[merchantColumn] || '').toLowerCase().includes('jetpack')).length - 1;
+                        const numericMatch = jetpackInvoiceStart.match(/\d+/);
+                        const prefix = jetpackInvoiceStart.replace(/\d+/g, '');
+                        if (numericMatch) {
+                            const startNum = parseInt(numericMatch[0]);
+                            const jetpackCount = preview.data.slice(0, actualRowIndex + 1).filter(r => String(r[merchantColumn] || '').toLowerCase().includes('jetpack')).length;
+                            currentInvoiceNumber = prefix + (startNum + jetpackCount - 1);
+                        } else {
+                            currentInvoiceNumber = jetpackInvoiceStart;
+                        }
                     } else if (merchantName.includes('auxford') && auxfordInvoiceStart) {
-                        currentInvoiceNumber = parseInt(auxfordInvoiceStart) + preview.data.slice(0, actualRowIndex + 1).filter(r => String(r[merchantColumn] || '').toLowerCase().includes('auxford')).length - 1;
+                        const numericMatch = auxfordInvoiceStart.match(/\d+/);
+                        const prefix = auxfordInvoiceStart.replace(/\d+/g, '');
+                        if (numericMatch) {
+                            const startNum = parseInt(numericMatch[0]);
+                            const auxfordCount = preview.data.slice(0, actualRowIndex + 1).filter(r => String(r[merchantColumn] || '').toLowerCase().includes('auxford')).length;
+                            currentInvoiceNumber = prefix + (startNum + auxfordCount - 1);
+                        } else {
+                            currentInvoiceNumber = auxfordInvoiceStart;
+                        }
                     }
                 }
 
@@ -600,13 +637,13 @@ export default function IndividualTransactionPDFs() {
                                             <label htmlFor="jetpack-invoice-start" className="block text-xs font-medium text-gray-700 mb-1">
                                                 Jetpack Merchant
                                             </label>
-                                            <input id="jetpack-invoice-start" type="number" min="1" value={jetpackInvoiceStart} onChange={(e) => setJetpackInvoiceStart(e.target.value)} placeholder="e.g., 101" className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                                            <input id="jetpack-invoice-start" type="text" value={jetpackInvoiceStart} onChange={(e) => setJetpackInvoiceStart(e.target.value)} placeholder="e.g., JP101 or 101" className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                                         </div>
                                         <div>
                                             <label htmlFor="auxford-invoice-start" className="block text-xs font-medium text-gray-700 mb-1">
                                                 Auxford Merchant
                                             </label>
-                                            <input id="auxford-invoice-start" type="number" min="1" value={auxfordInvoiceStart} onChange={(e) => setAuxfordInvoiceStart(e.target.value)} placeholder="e.g., 5001" className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                                            <input id="auxford-invoice-start" type="text" value={auxfordInvoiceStart} onChange={(e) => setAuxfordInvoiceStart(e.target.value)} placeholder="e.g., AX5001 or 5001" className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                                         </div>
                                     </div>
                                 </div>

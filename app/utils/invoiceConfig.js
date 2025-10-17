@@ -273,9 +273,9 @@ export const generateProfessionalInvoiceHTML = (
         
         .company-address {
             font-size: 10px; 
-            color: #6b7280;
+            color: #000000;
             line-height: 1.4;
-            font-weight: 600;
+            
         }
         
         .main-content {
@@ -340,12 +340,13 @@ export const generateProfessionalInvoiceHTML = (
             color: #1f2937;
             margin-bottom: 3mm;
             font-size: 12px; 
+            text-decoration: underline;
         }
         
         .terms-content {
             font-size: 10px; 
-            color: #6b7280; 
-            font-weight: 600;
+            color: #000000; 
+            
             line-height: 1.2; 
             letter-spacing: 0.4px; 
         }
@@ -491,7 +492,7 @@ export const generateProfessionalInvoiceHTML = (
                 </div>
                 
                 <div class="terms">
-                    <h3>Terms</h3>
+                    <h3>Terms:</h3>
                     <div class="terms-content">
                         <p>1. By receiving this invoice, the user has paid the appropriate fees to ${termsAcronym} through Payment Gate and accepts the company's terms and conditions in connection with the transaction.</p>
                         <p>2. All the invoices are raised against the UPI id through which the payment is collected</p>
