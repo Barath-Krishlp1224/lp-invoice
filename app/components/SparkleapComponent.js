@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, DollarSign, Copy, Search, Tag, Eye } from 'lucide-react';
 // Assuming SplitText and useDataProcessing are in the correct paths
-import SplitText from './SplitText';
+import SplitText from './SplitText'; 
 import useDataProcessing from '../hooks/useDataProcessing';
-import { generateProfessionalInvoiceHTML, formatCellValue } from '../utils/invoiceConfig';
+// NOTE: Make sure the path to your utils is correct: '../utils/sparkleap' or similar.
+import { generateProfessionalInvoiceHTML, formatCellValue, getMerchantConfig } from '../utils/sparkleap'; 
 
 export default function IndividualTransactionPDFs() {
     const [file, setFile] = useState(null);
@@ -17,9 +18,10 @@ export default function IndividualTransactionPDFs() {
     const [generatingZip, setGeneratingZip] = useState(false);
     const [isViewingInTabs, setIsViewingInTabs] = useState(false);
     const [zipProgress, setZipProgress] = useState(0);
-    const [jetpackInvoiceStart, setJetpackInvoiceStart] = useState('');
-    const [auxfordInvoiceStart, setAuxfordInvoiceStart] = useState('');
+    // Modified: Single state for Sparkleap starting invoice number
+    const [sparkleapInvoiceStart, setSparkleapInvoiceStart] = useState('');
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    const [tableKey, setTableKey] = useState(0);
 
     const {
         loading,
@@ -32,7 +34,7 @@ export default function IndividualTransactionPDFs() {
         duplicateColumn, setDuplicateColumn,
         duplicates,
         currentPage, rowsPerPage, totalPages, startIndex, endIndex, currentRows,
-        previewData,
+        previewData, // <-- This function will be used to force a table refresh
         goToNextPage, goToPreviousPage, goToPage,
     } = useDataProcessing(file);
 
@@ -50,6 +52,7 @@ export default function IndividualTransactionPDFs() {
         setToast({ show: true, message, type });
     };
 
+    // Dynamic library loading
     useEffect(() => {
         // Dynamically load JSZip for ZIP creation
         const scriptZip = document.createElement('script');
@@ -84,49 +87,37 @@ export default function IndividualTransactionPDFs() {
         return `${cleanFilename}` || `${rowData._rowIndex}`;
     };
 
+    /**
+     * Calculates the sequential invoice number based ONLY on the starting number and row index,
+     * assuming all transactions are for Sparkleap, as per the component's purpose.
+     */
     const calculateInvoiceNumber = (rowIndex) => {
-        if (!preview || !merchantColumn) return null;
+        // 1. Feature only runs if the preview data is loaded and the starting number is provided.
+        if (!preview || !sparkleapInvoiceStart) {
+            return null; 
+        }
+
+        // 2. The sequence position is simply the row index + 1
+        const relevantRowsCount = rowIndex + 1;
         
-        const row = preview.data[rowIndex];
-        const merchantName = row[merchantColumn] ? String(row[merchantColumn]).toLowerCase() : '';
+        // 3. Extract numeric part and prefix (e.g., from 'SL101' -> 'SL' and '101')
+        const numericMatch = sparkleapInvoiceStart.match(/\d+/);
+        const prefix = sparkleapInvoiceStart.replace(/\d+/g, '');
         
-        if (merchantName.includes('jetpack') && jetpackInvoiceStart) {
-            const jetpackRows = preview.data.slice(0, rowIndex + 1).filter(r => {
-                const m = r[merchantColumn] ? String(r[merchantColumn]).toLowerCase() : '';
-                return m.includes('jetpack');
-            });
+        if (numericMatch) {
+            const startNum = parseInt(numericMatch[0], 10);
             
-            // Extract numeric part from the starting number
-            const numericMatch = jetpackInvoiceStart.match(/\d+/);
-            const prefix = jetpackInvoiceStart.replace(/\d+/g, '');
+            // New number = starting number + current sequence position - 1 (since sequence starts at 1)
+            const newNum = startNum + relevantRowsCount - 1;
             
-            if (numericMatch) {
-                const startNum = parseInt(numericMatch[0]);
-                const newNum = startNum + jetpackRows.length - 1;
-                return prefix + newNum;
-            }
-            return jetpackInvoiceStart;
-            
-        } else if (merchantName.includes('auxford') && auxfordInvoiceStart) {
-            const auxfordRows = preview.data.slice(0, rowIndex + 1).filter(r => {
-                const m = r[merchantColumn] ? String(r[merchantColumn]).toLowerCase() : '';
-                return m.includes('auxford');
-            });
-            
-            // Extract numeric part from the starting number
-            const numericMatch = auxfordInvoiceStart.match(/\d+/);
-            const prefix = auxfordInvoiceStart.replace(/\d+/g, '');
-            
-            if (numericMatch) {
-                const startNum = parseInt(numericMatch[0]);
-                const newNum = startNum + auxfordRows.length - 1;
-                return prefix + newNum;
-            }
-            return auxfordInvoiceStart;
+            // Reconstruct the invoice number
+            return prefix + newNum;
         }
         
-        return null;
+        // Fallback if no numeric part is found (e.g., if the user just typed "INVOICE")
+        return sparkleapInvoiceStart;
     };
+
 
     const processFile = (selectedFile) => {
         if (selectedFile && (selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
@@ -191,7 +182,7 @@ export default function IndividualTransactionPDFs() {
     };
 
     const downloadAsPDF = (htmlContent, filename = 'invoice') => {
-        // Use the browser's native print function for simple PDF generation (best for direct printing/saving)
+        // Use the browser's native print function for simple PDF generation 
         const printWindow = window.open('', '_blank');
         if (printWindow) {
             printWindow.document.write(`
@@ -212,8 +203,6 @@ export default function IndividualTransactionPDFs() {
                         // Give browser time to render before printing
                         setTimeout(() => {
                             window.print();
-                            // Optional: close the tab after print dialog is shown/closed
-                            // window.close(); 
                         }, 500);
                     </script>
                 </body>
@@ -225,6 +214,7 @@ export default function IndividualTransactionPDFs() {
         }
     };
     
+    // Logic updated for 'sparkleap' only
     const viewAllInTabs = () => {
         if (!preview || !preview.data.length) return;
         if (!rrnColumn || !upiColumn || !amountColumn) {
@@ -237,35 +227,9 @@ export default function IndividualTransactionPDFs() {
 
         try {
             preview.data.forEach((rowData, i) => {
-                const merchantName = rowData[merchantColumn] ? String(rowData[merchantColumn]).toLowerCase() : '';
-                let currentInvoiceNumber = null;
-                
                 const actualRowIndex = i;
-                
-                // Calculate invoice number based on merchant type and starting number
-                if (merchantColumn) {
-                    if (merchantName.includes('jetpack') && jetpackInvoiceStart) {
-                        const numericMatch = jetpackInvoiceStart.match(/\d+/);
-                        const prefix = jetpackInvoiceStart.replace(/\d+/g, '');
-                        if (numericMatch) {
-                            const startNum = parseInt(numericMatch[0]);
-                            const jetpackCount = preview.data.slice(0, actualRowIndex + 1).filter(r => String(r[merchantColumn] || '').toLowerCase().includes('jetpack')).length;
-                            currentInvoiceNumber = prefix + (startNum + jetpackCount - 1);
-                        } else {
-                            currentInvoiceNumber = jetpackInvoiceStart;
-                        }
-                    } else if (merchantName.includes('auxford') && auxfordInvoiceStart) {
-                        const numericMatch = auxfordInvoiceStart.match(/\d+/);
-                        const prefix = auxfordInvoiceStart.replace(/\d+/g, '');
-                        if (numericMatch) {
-                            const startNum = parseInt(numericMatch[0]);
-                            const auxfordCount = preview.data.slice(0, actualRowIndex + 1).filter(r => String(r[merchantColumn] || '').toLowerCase().includes('auxford')).length;
-                            currentInvoiceNumber = prefix + (startNum + auxfordCount - 1);
-                        } else {
-                            currentInvoiceNumber = auxfordInvoiceStart;
-                        }
-                    }
-                }
+                // Use the common invoice calculation function
+                const currentInvoiceNumber = calculateInvoiceNumber(actualRowIndex);
 
                 const htmlContent = generateProfessionalInvoiceHTML(
                     rowData,
@@ -303,7 +267,6 @@ export default function IndividualTransactionPDFs() {
                 }
             });
             
-            // Show toast instead of alert
             showToast(`Opening ${preview.data.length} invoices in new tabs. Please ensure pop-up blockers are disabled.`, 'info');
 
         } catch (err) {
@@ -314,15 +277,6 @@ export default function IndividualTransactionPDFs() {
         }
     };
 
-    // Helper to create an element for html2pdf to process
-    const createInvoiceElement = (htmlContent) => {
-        const tempDiv = document.createElement('div');
-        // Set a width close to A4 size to help html2pdf with scaling
-        tempDiv.style.width = '208mm'; 
-        tempDiv.innerHTML = htmlContent;
-        return tempDiv;
-    };
-
     const downloadAllAsZip = async () => {
         if (!preview || !preview.data.length) return;
 
@@ -331,8 +285,7 @@ export default function IndividualTransactionPDFs() {
             return;
         }
 
-        // Check if the dynamically loaded libraries are available globally
-        if (!window.JSZip || !window.html2pdf) {
+        if (!window.JSZip || typeof window.html2pdf !== 'function') {
             setError('PDF or ZIP library not fully loaded. Please wait a moment and try again.');
             return;
         }
@@ -341,25 +294,33 @@ export default function IndividualTransactionPDFs() {
         setZipProgress(0);
         setError(null);
 
-        // Create a temporary, hidden container to render the PDF content for html2pdf
-        const tempContainer = document.createElement('div');
-        tempContainer.style.position = 'fixed';
-        tempContainer.style.top = '0';
-        tempContainer.style.left = '0';
-        tempContainer.style.zIndex = '-1000';
-        tempContainer.style.opacity = '0';
-        tempContainer.style.pointerEvents = 'none';
-        tempContainer.style.width = '208mm';
-        document.body.appendChild(tempContainer);
-
         try {
             const zip = new window.JSZip();
             const totalRows = preview.data.length;
+            
+            // Configuration for html2pdf.js 
+            const pdfOptions = {
+                margin: [1, 5, 1, 5],
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    logging: false,
+                    allowTaint: true,
+                    useCORS: true
+                },
+                jsPDF: {
+                    unit: 'mm',
+                    format: 'a4',
+                    orientation: 'portrait',
+                    compress: true
+                },
+                pagebreak: { mode: 'css' } 
+            };
 
             for (let i = 0; i < totalRows; i++) {
                 const rowData = preview.data[i];
                 const actualRowIndex = i;
-                const currentInvoiceNumber = calculateInvoiceNumber(actualRowIndex);
+                const currentInvoiceNumber = calculateInvoiceNumber(actualRowIndex); // Use updated logic
 
                 const htmlContent = generateProfessionalInvoiceHTML(
                     rowData,
@@ -373,36 +334,14 @@ export default function IndividualTransactionPDFs() {
                 );
                 const filename = getFilenameFromRRN(rowData);
 
-                const element = createInvoiceElement(htmlContent);
-                tempContainer.appendChild(element);
-
-                // Generate PDF Blob using html2pdf
+                // Generate PDF Blob using html2pdf from the HTML string directly
                 const pdfBlob = await window.html2pdf()
-                    .from(element)
-                    .set({
-                        margin: [1, 5, 1, 5],
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: {
-                            scale: 2,
-                            logging: false,
-                            allowTaint: true,
-                            useCORS: true
-                        },
-                        jsPDF: {
-                            unit: 'mm',
-                            format: 'a4',
-                            orientation: 'portrait',
-                            compress: true
-                        },
-                        pagebreak: { mode: 'none' } // Important to prevent page breaks in invoice HTML
-                    })
+                    .from(htmlContent) 
+                    .set(pdfOptions)
                     .output('blob');
 
                 // Add the PDF to the ZIP file
                 zip.file(`${filename}.pdf`, pdfBlob);
-                
-                // Clean up the temporary element
-                tempContainer.removeChild(element);
                 
                 // Update progress
                 setZipProgress(Math.round(((i + 1) / totalRows) * 100));
@@ -428,25 +367,19 @@ export default function IndividualTransactionPDFs() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            URL.revokeObjectURL(url); // Clean up the URL object
+            URL.revokeObjectURL(url); 
 
             showToast(`Successfully created ZIP file with ${totalRows} PDF invoices!`, 'success');
         } catch (err) {
             console.error('ZIP/PDF generation error:', err);
             setError('Error creating ZIP file: ' + err.message);
         } finally {
-            // Ensure the temp container is removed even if an error occurs
-            if (document.body.contains(tempContainer)) {
-                document.body.removeChild(tempContainer);
-            }
+            setGeneratingZip(false);
+            setZipProgress(0);
         }
-
-        setGeneratingZip(false);
-        setZipProgress(0);
     };
 
     const generateSinglePDF = async (index) => {
-        // Index is the row number on the current page
         if (!preview || !preview.data[startIndex + index]) return;
 
         if (!rrnColumn || !upiColumn || !amountColumn) {
@@ -459,7 +392,7 @@ export default function IndividualTransactionPDFs() {
         try {
             const rowData = preview.data[startIndex + index];
             const actualRowIndex = startIndex + index;
-            const invoiceNumber = calculateInvoiceNumber(actualRowIndex);
+            const invoiceNumber = calculateInvoiceNumber(actualRowIndex); // Use updated logic
 
             const htmlContent = generateProfessionalInvoiceHTML(
                 rowData,
@@ -490,8 +423,7 @@ export default function IndividualTransactionPDFs() {
         setAmountColumn('');
         setDuplicateColumn('');
         setShowDuplicates(false);
-        setJetpackInvoiceStart('');
-        setAuxfordInvoiceStart('');
+        setSparkleapInvoiceStart(''); // Reset Sparkleap setting
         if (fileInputRef.current) {
             fileInputRef.current.value = ''; // Reset the file input element
         }
@@ -611,22 +543,26 @@ export default function IndividualTransactionPDFs() {
                             <div className="border-t border-gray-200 bg-gray-50 p-6">
                                 <h3 className="text-base font-semibold text-gray-900 mb-4">Configure Invoice Settings</h3>
 
+                                {/* Modified: Only Sparkleap Invoice Start */}
                                 <div className="mb-4 p-4 bg-white rounded-lg border border-gray-200">
                                     <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                                        <Tag className="w-4 h-4 text-green-600 mr-2" />Starting Invoice Numbers
+                                        <Tag className="w-4 h-4 text-green-600 mr-2" />Starting Invoice Number
                                     </h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4">
                                         <div>
-                                            <label htmlFor="jetpack-invoice-start" className="block text-xs font-medium text-gray-700 mb-1">
-                                                Jetpack Merchant
+                                            <label htmlFor="sparkleap-invoice-start" className="block text-xs font-medium text-gray-700 mb-1">
+                                                Sparkleap Merchant
                                             </label>
-                                            <input id="jetpack-invoice-start" type="text" value={jetpackInvoiceStart} onChange={(e) => setJetpackInvoiceStart(e.target.value)} placeholder="e.g., JP101 or 101" className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                                        </div>
-                                        <div>
-                                            <label htmlFor="auxford-invoice-start" className="block text-xs font-medium text-gray-700 mb-1">
-                                                Auxford Merchant
-                                            </label>
-                                            <input id="auxford-invoice-start" type="text" value={auxfordInvoiceStart} onChange={(e) => setAuxfordInvoiceStart(e.target.value)} placeholder="e.g., AX5001 or 5001" className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                                            <input 
+                                                id="sparkleap-invoice-start" 
+                                                type="text" 
+                                                value={sparkleapInvoiceStart} 
+                                                onChange={(e) => { 
+                                                    setSparkleapInvoiceStart(e.target.value);
+                                                }} 
+                                                placeholder="e.g., SL101 or 101" 
+                                                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -708,7 +644,7 @@ export default function IndividualTransactionPDFs() {
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                <Hash className="w-3 h-3 inline mr-1" />RRN *
+                                                <Hash className="w-3 h-3 inline mr-1" />TXN ID (RRN) *
                                             </label>
                                             <select value={rrnColumn} onChange={(e) => setRrnColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
@@ -719,7 +655,7 @@ export default function IndividualTransactionPDFs() {
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                <FileText className="w-3 h-3 inline mr-1" />UPI ID *
+                                                <FileText className="w-3 h-3 inline mr-1" />Bill to (UPI ID) *
                                             </label>
                                             <select value={upiColumn} onChange={(e) => setUpiColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
@@ -916,4 +852,4 @@ export default function IndividualTransactionPDFs() {
             </div>
         </div>
     );
-} 
+}

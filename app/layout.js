@@ -1,5 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { M_PLUS_Rounded_1c } from "next/font/google";
+import Image from 'next/image';
+import Link from 'next/link'; // <-- Import the Link component
+import BlurText from './components/BlurText'; 
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,7 +18,7 @@ const geistMono = Geist_Mono({
 const mPlusRounded = M_PLUS_Rounded_1c({
   variable: "--font-mplus-rounded",
   subsets: ["latin"],
-  weight: ["400", "500", "700"], // adjust weights as needed
+  weight: ["400", "500", "700"],
 });
 
 export const metadata = {
@@ -29,6 +32,35 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${mPlusRounded.variable} antialiased`}
       >
+        <header className="bg-white shadow-md p-4 sticky top-0 z-50">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            
+            {/* Logo: Wrapped in Link to route to / */}
+            <Link href="/">
+              <Image
+                src="/logo hd.png"
+                alt="Lemonpay Logo"
+                width={250}
+                height={50}
+                className="cursor-pointer" // Optional: Add cursor styling for better UX
+              />
+            </Link>
+            
+            <div className="flex justify-center">
+              <BlurText
+                text="Lemonpay Invoice Generator"
+                className={`text-3xl font-semibold text-gray-800 ${mPlusRounded.variable} font-sans
+                           border-b-4 border-yellow-500 rounded-full pb-1 px-4`}
+                animateBy="words"
+                direction="top"
+                delay={100}
+                stepDuration={0.3}
+              />
+            </div>
+
+          </div>
+        </header>
+        
         {children}
       </body>
     </html>
