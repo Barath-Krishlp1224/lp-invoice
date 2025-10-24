@@ -1,7 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { M_PLUS_Rounded_1c } from "next/font/google";
 import Image from 'next/image';
-import Link from 'next/link'; // <-- Import the Link component
+import Link from 'next/link'; 
 import BlurText from './components/BlurText'; 
 import "./globals.css";
 
