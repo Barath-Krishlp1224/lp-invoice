@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, DollarSign, Copy, Search, Tag, Eye } from 'lucide-react';
 import SplitText from './SplitText'; 
 import useDataProcessing from '../hooks/useDataProcessing';
+// NOTE: formatCellValue is now guaranteed to output DD/MM/YYYY HH:MM
 import { generateProfessionalInvoiceHTML, formatCellValue, getMerchantConfig } from '../utils/sparkleap'; 
 
 export default function IndividualTransactionPDFs() {
@@ -764,7 +765,7 @@ export default function IndividualTransactionPDFs() {
                                                     return (
                                                         <tr key={actualRowIndex} className="hover:bg-gray-50 transition-colors">
                                                             <td className="px-4 py-2 text-xs font-medium text-gray-900">{actualRowIndex + 1}</td>
-                                                            {/* Date/Time Data Cell */}
+                                                            {/* Date/Time Data Cell - Now correctly formatted DD/MM/YYYY HH:MM */}
                                                             {dateColumn && (
                                                                 <td className="px-4 py-2 text-xs text-gray-700">
                                                                     {formatCellValue(row[dateColumn], dateColumn)}

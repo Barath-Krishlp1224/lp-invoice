@@ -66,6 +66,8 @@ export const detectRequiredColumns = (headers) => {
 
 /**
  * Formats a cell value based on its inferred type (especially for currency and date).
+ * FIX APPLIED: Manually constructs DD/MM/YYYY HH:MM format for consistent output 
+ * regardless of browser/environment locale settings, ensuring Date/Month/Year order.
  */
 export const formatCellValue = (value, header) => {
     const headerLower = header?.toLowerCase() || '';
@@ -81,10 +83,14 @@ export const formatCellValue = (value, header) => {
             
             // Check if the output is a valid date string
             if (!isNaN(excelDate.getTime())) {
-                return excelDate.toLocaleString('en-IN', {
-                    year: 'numeric', month: '2-digit', day: '2-digit', 
-                    hour: '2-digit', minute: '2-digit', hour12: false
-                });
+                // Manually construct DD/MM/YYYY HH:MM
+                const day = String(excelDate.getDate()).padStart(2, '0');
+                const month = String(excelDate.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+                const year = excelDate.getFullYear();
+                const hours = String(excelDate.getHours()).padStart(2, '0');
+                const minutes = String(excelDate.getMinutes()).padStart(2, '0');
+
+                return `${day}/${month}/${year} ${hours}:${minutes}`;
             }
         }
         
@@ -93,10 +99,14 @@ export const formatCellValue = (value, header) => {
     
     // For Date objects passed from the data hook, format them nicely
     if (value instanceof Date && !isNaN(value.getTime())) {
-        return value.toLocaleString('en-IN', {
-            year: 'numeric', month: '2-digit', day: '2-digit', 
-            hour: '2-digit', minute: '2-digit', hour12: false
-        });
+        // Manually construct DD/MM/YYYY HH:MM
+        const day = String(value.getDate()).padStart(2, '0');
+        const month = String(value.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const year = value.getFullYear();
+        const hours = String(value.getHours()).padStart(2, '0');
+        const minutes = String(value.getMinutes()).padStart(2, '0');
+
+        return `${day}/${month}/${year} ${hours}:${minutes}`;
     }
 
     // For RRN/UTR/UPI (which should generally be strings)
@@ -136,6 +146,7 @@ export const generateProfessionalInvoiceHTML = (
     // Use the value directly from the selected dateColumn
     let transactionDateTimeDisplay = 'N/A';
     if (dateColumn && rowData[dateColumn] !== undefined) {
+        // This relies on the now-fixed formatCellValue
         transactionDateTimeDisplay = formatCellValue(rowData[dateColumn], dateColumn);
     }
     
