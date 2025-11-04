@@ -6,24 +6,22 @@
 // CONFIGURATION AND UTILITIES
 // -----------------------------------------------------------------------------
 
-// --- SPARKLEAP SPECIFIC CONFIGURATION (UPDATED) ---
+// --- SPARKLEAP SPECIFIC CONFIGURATION ---
 const SPARKLEAP_ADDRESS = 'NO 195, VINAYAKAR KOVIL, STREET, VANUR TK, Eraiyur,<br/>Tindivanam, Villupuram- 604304 IN<br/>GST: 33ABOCS4605D1ZI';
 const SPARKLEAP_CONFIG = {
     companyName: 'SPARKLEAP TECH SOFTWARE SOLUTIONS PRIVATE LIMITED',
     address: SPARKLEAP_ADDRESS,
-    termsAcronym: 'SPKL' // Updated as requested
+    termsAcronym: 'SPKL'
 };
 // ------------------------------------------
 
 /**
  * Retrieves the merchant-specific configuration based on the row data.
- * Modified: Now only handles 'sparkleap' and uses it as the default.
  * @param {object} rowData - The current transaction row data.
  * @param {string} merchantColumn - The name of the column containing the merchant name.
  * @returns {{companyName: string, address: string, termsAcronym: string}} The merchant configuration.
  */
 export const getMerchantConfig = (rowData, merchantColumn) => {
-    // Always return Sparkleap's configuration, as it is the only supported merchant.
     
     if (!merchantColumn || !rowData[merchantColumn]) {
         return SPARKLEAP_CONFIG;
@@ -31,44 +29,20 @@ export const getMerchantConfig = (rowData, merchantColumn) => {
 
     const merchantName = String(rowData[merchantColumn]).toLowerCase().trim();
 
-    // Check if the merchant column contains the 'sparkleap' keyword
     if (merchantName.includes('sparkleap')) {
         return SPARKLEAP_CONFIG;
     }
     
-    // Fallback to Sparkleap's configuration
     return SPARKLEAP_CONFIG;
 };
 
 // -----------------------------------------------------------------------------
 
 /**
- * Attempts to detect required columns based on headers.
+ * Attempts to detect required columns based on headers. (Only kept for compatibility with other parts of the system)
  */
 export const detectRequiredColumns = (headers) => {
     const detectedColumns = {};
-
-    detectedColumns.transactionDate = headers.find(h => {
-        const lower = h.toLowerCase();
-        return lower.includes('transaction') && lower.includes('date') ||
-            lower.includes('txn') && lower.includes('date') ||
-            lower.includes('date');
-    });
-
-    detectedColumns.transactionTime = headers.find(h => {
-        const lower = h.toLowerCase();
-        return lower.includes('transaction') && lower.includes('time') ||
-            lower.includes('txn') && lower.includes('time') ||
-            lower.includes('time');
-    });
-
-    detectedColumns.merchantName = headers.find(h => {
-        const lower = h.toLowerCase();
-        return lower.includes('merchant') && lower.includes('name') ||
-            lower.includes('merchant') ||
-            lower.includes('business') ||
-            lower.includes('store');
-    });
 
     detectedColumns.amount = headers.find(h => {
         const lower = h.toLowerCase();
@@ -81,25 +55,8 @@ export const detectRequiredColumns = (headers) => {
     detectedColumns.vpa = headers.find(h => {
         const lower = h.toLowerCase();
         return lower.includes('vpa') ||
-            lower.includes('vba') ||
             lower.includes('virtual') && lower.includes('payment') ||
             lower.includes('payee') && (lower.includes('vpa') || lower.includes('upi'));
-    });
-
-    detectedColumns.utr = headers.find(h => {
-        const lower = h.toLowerCase();
-        return lower.includes('utr') ||
-            lower.includes('unique') && lower.includes('transaction') ||
-            lower.includes('transaction') && lower.includes('reference') ||
-            lower.includes('txn') && lower.includes('ref');
-    });
-
-    detectedColumns.remarks = headers.find(h => {
-        const lower = h.toLowerCase();
-        return lower.includes('remark') ||
-            lower.includes('comment') ||
-            lower.includes('description') ||
-            lower.includes('note');
     });
 
     return detectedColumns;
@@ -117,74 +74,75 @@ export const formatCellValue = (value, header) => {
         if (headerLower.includes('amount') || headerLower.includes('txnamount')) {
             return `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
         }
-        // Excel date-to-number conversion logic
-        else if (headerLower.includes('date') && value > 40000 && value < 60000) {
+        // Handle Excel date number: check if it's a date number (usually large)
+        if (value > 10000 && value < 100000) {
+            // This is a rough check for typical Excel date numbers (1927 to 2195)
             const excelDate = new Date((value - 25569) * 86400 * 1000);
-            return excelDate.toISOString().split('T')[0];
+            
+            // Check if the output is a valid date string
+            if (!isNaN(excelDate.getTime())) {
+                return excelDate.toLocaleString('en-IN', {
+                    year: 'numeric', month: '2-digit', day: '2-digit', 
+                    hour: '2-digit', minute: '2-digit', hour12: false
+                });
+            }
         }
-        // Excel time-to-number conversion logic
-        else if (headerLower.includes('time') && value < 1) {
-            return new Date(value * 24 * 60 * 60 * 1000).toTimeString().split(' ')[0];
-        }
-        else {
-            return value.toString();
-        }
+        
+        return value.toString();
     }
     
+    // For Date objects passed from the data hook, format them nicely
+    if (value instanceof Date && !isNaN(value.getTime())) {
+        return value.toLocaleString('en-IN', {
+            year: 'numeric', month: '2-digit', day: '2-digit', 
+            hour: '2-digit', minute: '2-digit', hour12: false
+        });
+    }
+
     // For RRN/UTR/UPI (which should generally be strings)
     return String(value || '');
 };
 
 // -----------------------------------------------------------------------------
-// INVOICE GENERATION WITH INVOICE NUMBERS
+// INVOICE GENERATION
 // -----------------------------------------------------------------------------
 
 /**
  * Generates the professional invoice HTML content for a single transaction.
  * @param {object} rowData - The current transaction row data.
- * @param {string[]} headers - The list of column headers.
  * @param {number|string|null} invoiceNumber - The dynamically generated or set invoice number.
  * @param {string} rrnColumn - The RRN column name.
  * @param {string} upiColumn - The UPI column name.
  * @param {string} merchantColumn - The Merchant column name.
  * @param {string} amountColumn - The Amount column name.
- * @param {object} customPrefixes - Custom prefix/suffix for invoice number (currently unused).
+ * @param {string} dateColumn - The Date/Time column name (NEW REQUIRED PARAMETER).
  */
 export const generateProfessionalInvoiceHTML = (
     rowData,
-    headers,
     invoiceNumber,
     rrnColumn,
     upiColumn,
     merchantColumn,
     amountColumn,
-    customPrefixes 
+    dateColumn // New required parameter
 ) => {
-    const currentDate = new Date().toLocaleDateString('en-IN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-
+    // --- Merchant Info ---
     const merchantInfo = getMerchantConfig(rowData, merchantColumn);
-    const detectedCols = detectRequiredColumns(headers);
 
-    // Prepare Invoice Number - use provided number or default to '-'
+    // --- Invoice Number ---
     const invoiceNumberToDisplay = invoiceNumber ? String(invoiceNumber) : '-';
 
-    const transactionDateValue = detectedCols.transactionDate && rowData[detectedCols.transactionDate] ?
-        formatCellValue(rowData[detectedCols.transactionDate], detectedCols.transactionDate).split(' ')[0] :
-        currentDate.split(',')[0].split(' ')[0];
-
-    const transactionTimeValue = detectedCols.transactionTime && rowData[detectedCols.transactionTime] ?
-        formatCellValue(rowData[detectedCols.transactionTime], detectedCols.transactionTime) :
-        currentDate.split(', ')[1]?.split(' ')[0] || '00:00';
+    // --- Transaction Date/Time (FIXED LOGIC) ---
+    // Use the value directly from the selected dateColumn
+    let transactionDateTimeDisplay = 'N/A';
+    if (dateColumn && rowData[dateColumn] !== undefined) {
+        transactionDateTimeDisplay = formatCellValue(rowData[dateColumn], dateColumn);
+    }
     
-    // **MODIFICATION 1: Combine Date and Time for display in both date columns**
-    const transactionDateTimeDisplay = `${transactionDateValue} ${transactionTimeValue}`;
+    // Fallback detection (for amount and VPA)
+    const detectedCols = detectRequiredColumns([]); // Pass empty headers as we rely on explicit column names
 
+    // --- Amount ---
     let amountValue = 0;
     if (amountColumn && rowData[amountColumn] !== undefined && rowData[amountColumn] !== null && rowData[amountColumn] !== '') {
         const rawValue = String(rowData[amountColumn]).replace(/[₹,\s]/g, '');
@@ -195,11 +153,11 @@ export const generateProfessionalInvoiceHTML = (
     }
     const formattedAmount = amountValue.toLocaleString('en-IN', { minimumFractionDigits: 2 });
 
-    // **MODIFICATION 2: Use UPI ID for "Bill to" (Customer Name)**
+    // --- Bill To (UPI ID) ---
     const upiIdValue = upiColumn && rowData[upiColumn] ? formatCellValue(rowData[upiColumn], upiColumn) :
         (detectedCols.vpa && rowData[detectedCols.vpa] ? formatCellValue(rowData[detectedCols.vpa], detectedCols.vpa) : 'N/A');
 
-    // **MODIFICATION 3: Use RRN for TXN ID**
+    // --- TXN ID (RRN) ---
     const rrnValue = rrnColumn && rowData[rrnColumn] ? formatCellValue(rowData[rrnColumn], rrnColumn) : 'N/A';
 
     const termsAcronym = merchantInfo.termsAcronym;
@@ -424,39 +382,49 @@ export const generateProfessionalInvoiceHTML = (
             
             <div class="main-content">
                 <div class="table-container">
-                    <table class="invoice-table">
+                    <table class="invoice-table" style="table-layout: fixed;">
                         <thead>
                             <tr>
-                                <th>Bill to</th>
-                                <th>Transaction Date & Time</th>
-                                <th>Wallet Load Date & Time</th>
+                                <th style="width: 33.33%; padding: 1.5mm 2mm;">Bill to</th>
+                                <th style="width: 33.33%; padding: 1.5mm 2mm;">Transaction Date & Time</th>
+                                <th style="width: 33.34%; padding: 1.5mm 2mm;">Wallet Load Date & Time</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td class="center">${upiIdValue}</td>
-                                <td class="center">${transactionDateTimeDisplay}</td>
-                                <td class="center">${transactionDateTimeDisplay}</td>
+                                <td class="center" style="padding: 1.5mm 2mm;">${upiIdValue}</td>
+                                <td class="center" style="padding: 1.5mm 2mm;">${transactionDateTimeDisplay}</td>
+                                <td class="center" style="padding: 1.5mm 2mm;">${transactionDateTimeDisplay}</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
                 
-                <div class="table-container">
-                    <table class="invoice-table">
-                        <thead>
-                            <tr>
-                                <th>TXN ID</th>
-                                <th>Invoice No.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="center">${rrnValue}</td>
-                                <td class="center">${invoiceNumberToDisplay}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div style="display: flex; gap: 6mm; margin-bottom: 6mm; align-items: flex-end;">
+                    <div style="width: 33.33%;">
+                        <table class="invoice-table">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 1.5mm 3mm;">TXN ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="center" style="padding: 1.5mm 3mm;">${rrnValue}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="width: 30%; margin-left: 40mm;">
+                        <table class="invoice-table" style="table-layout: fixed;">
+                            <tbody>
+                                <tr>
+                                    <td class="center" style="width: 10px; padding: 1mm 1.5mm; font-weight: bold;">Invoice No.</td>
+                                    <td class="center" style="width: 10px; padding: 1mm 1.5mm; font-weight: bold;">${invoiceNumberToDisplay}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 
                 <div class="table-container">
