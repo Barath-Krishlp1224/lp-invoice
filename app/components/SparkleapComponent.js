@@ -417,6 +417,28 @@ export default function IndividualTransactionPDFs() {
             fileInputRef.current.value = ''; // Reset the file input element
         }
     };
+    
+    // --- NEW HELPER FUNCTION FOR DATE REFORMATTING ---
+    const reformatDateString = (dateString) => {
+        if (!dateString) return '';
+        // Regex to match M/D/Y format at the start and capture the time component (the rest)
+        const parts = String(dateString).match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})(.*)/);
+
+        if (parts) {
+            // parts[1] is Month (M), parts[2] is Day (D), parts[3] is Year (Y), parts[4] is the rest (Time/Separator)
+            const month = parts[1].padStart(2, '0');
+            const day = parts[2].padStart(2, '0');
+            const year = parts[3];
+            const time = parts[4].trim() ? ` ${parts[4].trim()}` : ''; // Add a space if time exists
+            
+            // Re-join as D/M/Y + Time
+            return `${day}/${month}/${year}${time}`;
+        }
+        
+        // If it doesn't match the expected pattern, return the original string
+        return dateString;
+    };
+    // -------------------------------------------------
 
     // Updated: dateColumn is now required
     const isReadyToGenerate = rrnColumn && upiColumn && amountColumn && dateColumn;
@@ -765,10 +787,10 @@ export default function IndividualTransactionPDFs() {
                                                     return (
                                                         <tr key={actualRowIndex} className="hover:bg-gray-50 transition-colors">
                                                             <td className="px-4 py-2 text-xs font-medium text-gray-900">{actualRowIndex + 1}</td>
-                                                            {/* Date/Time Data Cell - Now correctly formatted DD/MM/YYYY HH:MM */}
+                                                            {/* Date/Time Data Cell - NOW SHOWING REFORMATTED D/M/Y */}
                                                             {dateColumn && (
                                                                 <td className="px-4 py-2 text-xs text-gray-700">
-                                                                    {formatCellValue(row[dateColumn], dateColumn)}
+                                                                    {reformatDateString(row[dateColumn])}
                                                                 </td>
                                                             )}
                                                             {rrnColumn && (

@@ -84,11 +84,11 @@ export const formatCellValue = (value, header) => {
             // Check if the output is a valid date string
             if (!isNaN(excelDate.getTime())) {
                 // Manually construct DD/MM/YYYY HH:MM
-                const day = String(excelDate.getDate()).padStart(2, '0');
-                const month = String(excelDate.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
-                const year = excelDate.getFullYear();
-                const hours = String(excelDate.getHours()).padStart(2, '0');
-                const minutes = String(excelDate.getMinutes()).padStart(2, '0');
+                const day = String(excelDate.getUTCDate()).padStart(2, '0');
+                const month = String(excelDate.getUTCMonth() + 1).padStart(2, '0');
+                const year = excelDate.getUTCFullYear();
+                const hours = String(excelDate.getUTCHours()).padStart(2, '0');
+                const minutes = String(excelDate.getUTCMinutes()).padStart(2, '0');
 
                 return `${day}/${month}/${year} ${hours}:${minutes}`;
             }
@@ -101,12 +101,28 @@ export const formatCellValue = (value, header) => {
     if (value instanceof Date && !isNaN(value.getTime())) {
         // Manually construct DD/MM/YYYY HH:MM
         const day = String(value.getDate()).padStart(2, '0');
-        const month = String(value.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const month = String(value.getMonth() + 1).padStart(2, '0');
         const year = value.getFullYear();
         const hours = String(value.getHours()).padStart(2, '0');
         const minutes = String(value.getMinutes()).padStart(2, '0');
 
         return `${day}/${month}/${year} ${hours}:${minutes}`;
+    }
+
+    // Try to parse string dates that might be in different formats
+    if (typeof value === 'string' && value.trim()) {
+        const trimmed = value.trim();
+        // Try parsing as a date string
+        const parsedDate = new Date(trimmed);
+        if (!isNaN(parsedDate.getTime())) {
+            const day = String(parsedDate.getDate()).padStart(2, '0');
+            const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+            const year = parsedDate.getFullYear();
+            const hours = String(parsedDate.getHours()).padStart(2, '0');
+            const minutes = String(parsedDate.getMinutes()).padStart(2, '0');
+
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
+        }
     }
 
     // For RRN/UTR/UPI (which should generally be strings)
