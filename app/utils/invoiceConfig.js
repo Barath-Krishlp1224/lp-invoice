@@ -125,6 +125,7 @@ export const formatCellValue = (value, header) => {
             return `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
         }
         else if (headerLower.includes('date') && value > 40000 && value < 60000) {
+            // Excel Date Handling: Converts to ISO string (YYYY-MM-DD)
             const excelDate = new Date((value - 25569) * 86400 * 1000);
             return excelDate.toISOString().split('T')[0];
         }
@@ -178,13 +179,30 @@ export const generateProfessionalInvoiceHTML = (
     // Prepare Invoice Number - use provided number or default to '-'
     const invoiceNumberToDisplay = invoiceNumber ? String(invoiceNumber) : '-';
 
+    // 1. Get transaction date value (either YYYY-MM-DD from Excel or DD/MM/YYYY from fallback)
     const transactionDateValue = detectedCols.transactionDate && rowData[detectedCols.transactionDate] ?
         formatCellValue(rowData[detectedCols.transactionDate], detectedCols.transactionDate).split(' ')[0] :
         currentDate.split(',')[0].split(' ')[0];
 
+    // 2. Get transaction time value
     const transactionTimeValue = detectedCols.transactionTime && rowData[detectedCols.transactionTime] ?
         formatCellValue(rowData[detectedCols.transactionTime], detectedCols.transactionTime) :
         currentDate.split(', ')[1]?.split(' ')[0] || '00:00';
+
+    // 3. APPLY DD/MM/YYYY FORMAT CORRECTION
+    let finalTransactionDate;
+    if (transactionDateValue.includes('-')) {
+        // Correct YYYY-MM-DD (from formatCellValue for Excel dates) to DD/MM/YYYY
+        const parts = transactionDateValue.split('-');
+        finalTransactionDate = `${parts[2]}/${parts[1]}/${parts[0]}`; 
+    } else {
+        // Assume DD/MM/YYYY format is already correct (from en-IN fallback or raw data)
+        finalTransactionDate = transactionDateValue;
+    }
+    
+    // 4. Combine the corrected date and time
+    const combinedDateTime = `${transactionTimeValue}`;
+    // END DATE FORMATTING FIX
 
     let amountValue = 0;
     if (amountColumn && rowData[amountColumn] !== undefined && rowData[amountColumn] !== null && rowData[amountColumn] !== '') {
@@ -426,36 +444,47 @@ export const generateProfessionalInvoiceHTML = (
                     <table class="invoice-table">
                         <thead>
                             <tr>
-                                <th>Bill to</th>
-                                <th>Transaction Date & Time</th>
-                                <th>Wallet Load Date & Time</th>
+                                <th style="width: 33.33%;">Bill to</th>
+                                <th style="width: 33.33%;">Transaction Date & Time</th>
+                                <th style="width: 33.33%;">Wallet Load Date & Time</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td class="center">${upiIdValue}</td>
-                                <td class="center">${transactionTimeValue}</td>
-                                <td class="center">${transactionTimeValue}</td>
+                                <td class="center">${combinedDateTime}</td>
+                                <td class="center">${combinedDateTime}</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
                 
-                <div class="table-container">
-                    <table class="invoice-table">
-                        <thead>
-                            <tr>
-                                <th>RRN No.</th>
-                                <th>Invoice No.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="center">${rrnValue}</td>
-                                <td class="center">${invoiceNumberToDisplay}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div style="display: flex; gap: 10mm; margin-bottom: 6mm; align-items: flex-end;">
+                    <div style="width: 33.33%;">
+                        <table class="invoice-table">
+                            <thead>
+                                <tr>
+                                    <th>RRN No.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="center">${rrnValue}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="width: 30%; margin-left: 40mm;">
+                        <table class="invoice-table" style="table-layout: fixed;">
+                            <tbody>
+                                <tr>
+                                    <td class="center" style="width: 10px; padding: 1mm 1.5mm; font-weight: bold;">Invoice No.</td>
+                                    <td class="center" style="width: 10px; padding: 1mm 1.5mm; font-weight: bold;">${invoiceNumberToDisplay}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 
                 <div class="table-container">

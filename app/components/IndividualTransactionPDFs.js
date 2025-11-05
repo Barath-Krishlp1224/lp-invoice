@@ -5,7 +5,7 @@ import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, 
 // Assuming SplitText and useDataProcessing are in the correct paths
 import SplitText from './SplitText';
 import useDataProcessing from '../hooks/useDataProcessing';
-import { generateProfessionalInvoiceHTML, formatCellValue } from '../utils/invoiceConfig';
+import { generateProfessionalInvoiceHTML, formatCellValue, detectRequiredColumns } from '../utils/invoiceConfig'; // **NOTE: detectRequiredColumns imported**
 
 export default function IndividualTransactionPDFs() {
     const [file, setFile] = useState(null);
@@ -20,6 +20,9 @@ export default function IndividualTransactionPDFs() {
     const [jetpackInvoiceStart, setJetpackInvoiceStart] = useState('');
     const [auxfordInvoiceStart, setAuxfordInvoiceStart] = useState('');
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    
+    // **NEW STATE FOR TRANSACTION DATE COLUMN**
+    const [transactionDateColumn, setTransactionDateColumn] = useState('');
 
     const {
         loading,
@@ -35,6 +38,16 @@ export default function IndividualTransactionPDFs() {
         previewData,
         goToNextPage, goToPreviousPage, goToPage,
     } = useDataProcessing(file);
+
+    // Effect to detect the date column when preview data is available
+    useEffect(() => {
+        if (preview && preview.headers.length > 0 && !transactionDateColumn) {
+            const detectedCols = detectRequiredColumns(preview.headers);
+            if (detectedCols.transactionDate) {
+                setTransactionDateColumn(detectedCols.transactionDate);
+            }
+        }
+    }, [preview, transactionDateColumn]);
 
     // Toast auto-hide effect
     useEffect(() => {
@@ -489,6 +502,8 @@ export default function IndividualTransactionPDFs() {
         setMerchantColumn('');
         setAmountColumn('');
         setDuplicateColumn('');
+        // **RESET NEW DATE COLUMN**
+        setTransactionDateColumn('');
         setShowDuplicates(false);
         setJetpackInvoiceStart('');
         setAuxfordInvoiceStart('');
@@ -686,6 +701,17 @@ export default function IndividualTransactionPDFs() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                                         <div>
                                             <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                <FileText className="w-3 h-3 inline mr-1 text-green-600" />Date (Optional)
+                                            </label>
+                                            <select value={transactionDateColumn} onChange={(e) => setTransactionDateColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                                <option value="">Select</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
+                                                    <option key={header} value={header}>{header}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">
                                                 <Building2 className="w-3 h-3 inline mr-1 text-green-600" />Merchant (Optional)
                                             </label>
                                             <select value={merchantColumn} onChange={(e) => setMerchantColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
@@ -717,7 +743,8 @@ export default function IndividualTransactionPDFs() {
                                                 ))}
                                             </select>
                                         </div>
-                                        <div>
+                                        {/* UPI Column is moved down to make space for date, but kept as required */}
+                                        <div className="lg:col-span-1"> 
                                             <label className="block text-xs font-medium text-gray-700 mb-1">
                                                 <FileText className="w-3 h-3 inline mr-1" />UPI ID *
                                             </label>
@@ -731,6 +758,10 @@ export default function IndividualTransactionPDFs() {
                                     </div>
                                     <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
                                         <div className="flex flex-wrap gap-2">
+                                            <div className={`flex items-center px-2 py-1 rounded text-xs ${transactionDateColumn ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${transactionDateColumn ? 'bg-green-600' : 'bg-gray-400'}`}></div>
+                                                Date: {transactionDateColumn || 'Not set'}
+                                            </div>
                                             <div className={`flex items-center px-2 py-1 rounded text-xs ${merchantColumn ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                                                 <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${merchantColumn ? 'bg-green-600' : 'bg-gray-400'}`}></div>
                                                 Merchant: {merchantColumn || 'Not set'}
@@ -744,7 +775,7 @@ export default function IndividualTransactionPDFs() {
                                                 RRN: {rrnColumn || 'Required'}
                                             </div>
                                             <div className={`flex items-center px-2 py-1 rounded text-xs ${upiColumn ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-                                                <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${upiColumn ? 'bg-green-600' : 'bg-red-500'}`}></div>
+                                                <div className="w-1.5 h-1.5 rounded-full mr-1.5 bg-red-500"></div>
                                                 UPI ID: {upiColumn || 'Required'}
                                             </div>
                                         </div>
@@ -787,6 +818,10 @@ export default function IndividualTransactionPDFs() {
                                             <thead className="bg-gray-50">
                                                 <tr>
                                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">Row</th>
+                                                    {/* **NEW DATE COLUMN HEADER** */}
+                                                    {transactionDateColumn && (
+                                                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">{transactionDateColumn}</th>
+                                                    )}
                                                     {rrnColumn && (
                                                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">{rrnColumn}</th>
                                                     )}
@@ -800,7 +835,7 @@ export default function IndividualTransactionPDFs() {
                                                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">{amountColumn}</th>
                                                     )}
                                                     {preview.headers.filter(header =>
-                                                        header !== '_rowIndex' && header !== rrnColumn && header !== upiColumn && header !== merchantColumn && header !== amountColumn && header !== duplicateColumn
+                                                        header !== '_rowIndex' && header !== rrnColumn && header !== upiColumn && header !== merchantColumn && header !== amountColumn && header !== duplicateColumn && header !== transactionDateColumn
                                                     ).slice(0, 2).map((header) => (
                                                         <th key={header} className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">{header}</th>
                                                     ))}
@@ -816,6 +851,12 @@ export default function IndividualTransactionPDFs() {
                                                     return (
                                                         <tr key={actualRowIndex} className="hover:bg-gray-50 transition-colors">
                                                             <td className="px-4 py-2 text-xs font-medium text-gray-900">{actualRowIndex + 1}</td>
+                                                            {/* **NEW DATE COLUMN DATA** */}
+                                                            {transactionDateColumn && (
+                                                                <td className="px-4 py-2 text-xs text-gray-700">
+                                                                    {formatCellValue(row[transactionDateColumn], transactionDateColumn).split(' ')[0]}
+                                                                </td>
+                                                            )}
                                                             {rrnColumn && (
                                                                 <td className="px-4 py-2 text-xs text-gray-700">{getFilenameFromRRN(row)}.pdf</td>
                                                             )}
@@ -835,7 +876,7 @@ export default function IndividualTransactionPDFs() {
                                                                 <td className="px-4 py-2 text-xs text-gray-700">{formatCellValue(row[amountColumn], amountColumn)}</td>
                                                             )}
                                                             {preview.headers.filter(header =>
-                                                                header !== '_rowIndex' && header !== rrnColumn && header !== upiColumn && header !== merchantColumn && header !== amountColumn && header !== duplicateColumn
+                                                                header !== '_rowIndex' && header !== rrnColumn && header !== upiColumn && header !== merchantColumn && header !== amountColumn && header !== duplicateColumn && header !== transactionDateColumn
                                                             ).slice(0, 2).map((header) => (
                                                                 <td key={header} className="px-4 py-2 text-xs text-gray-700">
                                                                     {formatCellValue(row[header], header).substring(0, 25)}
@@ -916,4 +957,4 @@ export default function IndividualTransactionPDFs() {
             </div>
         </div>
     );
-} 
+}
