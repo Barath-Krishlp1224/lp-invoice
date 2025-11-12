@@ -1,8 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { M_PLUS_Rounded_1c } from "next/font/google";
-import Image from 'next/image';
-import Link from 'next/link'; 
-import BlurText from './components/BlurText'; 
+// Removed unused imports: Image, Link, BlurText
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,35 +30,7 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${mPlusRounded.variable} antialiased`}
       >
-        <header className="bg-white shadow-sm border-b border-gray-200 p-4 sticky top-0 z-50">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            
-            {/* Logo: Wrapped in Link to route to / */}
-            <Link href="/">
-              <Image
-                src="/logo hd.png"
-                alt="Lemonpay Logo"
-                width={250}
-                height={50}
-                className="cursor-pointer"
-              />
-            </Link>
-            
-            <div className="flex justify-center">
-              <BlurText
-                text="Lemonpay Invoice Generator"
-                className={`text-2xl font-bold text-gray-900 ${mPlusRounded.variable} font-sans
-                           relative pb-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2
-                           after:w-40 after:h-1 after:bg-yellow-500 after:rounded-full`}
-                animateBy="words"
-                direction="top"
-                delay={100}
-                stepDuration={0.3}
-              />
-            </div>
-
-          </div>
-        </header>
+        {/* Removed the entire <header> element, which contained the logo and title */}
         
         {children}
       </body>

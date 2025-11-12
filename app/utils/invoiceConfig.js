@@ -1,17 +1,4 @@
-/**
- * Utility functions for generating professional invoice HTML and configurations.
- */
 
-// -----------------------------------------------------------------------------
-// CONFIGURATION AND UTILITIES
-// -----------------------------------------------------------------------------
-
-/**
- * Retrieves the merchant-specific configuration based on the row data.
- * @param {object} rowData - The current transaction row data.
- * @param {string} merchantColumn - The name of the column containing the merchant name.
- * @returns {{companyName: string, address: string, termsAcronym: string}} The merchant configuration.
- */
 export const getMerchantConfig = (rowData, merchantColumn) => {
     const auxfordAddress = 'NO 15 11 CROSS POONGAVANAM GARDEN MANAVELY KARIKALAMBAKAM PONDICHERRY - 605007 IN<br/>GST: 34AAYCA4056H1ZD';
     const jetpackAddress = 'No.195A Vinayagar koil St Eraiyur Tindivanam, Villupuram Tamil Nadu-604304 IN<br/>GST: 33AAFCJ9470R1ZS';
@@ -534,3 +521,5 @@ export const generateProfessionalInvoiceHTML = (
 </body>
 </html>`;
 };
+
+

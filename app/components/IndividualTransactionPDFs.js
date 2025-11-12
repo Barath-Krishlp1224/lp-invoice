@@ -2,10 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, DollarSign, Copy, Search, Tag, Eye } from 'lucide-react';
-// Assuming SplitText and useDataProcessing are in the correct paths
 import SplitText from './SplitText';
 import useDataProcessing from '../hooks/useDataProcessing';
-import { generateProfessionalInvoiceHTML, formatCellValue, detectRequiredColumns } from '../utils/invoiceConfig'; // **NOTE: detectRequiredColumns imported**
+import { generateProfessionalInvoiceHTML, formatCellValue, detectRequiredColumns } from '../utils/invoiceConfig';
 
 export default function IndividualTransactionPDFs() {
     const [file, setFile] = useState(null);
@@ -288,7 +287,7 @@ export default function IndividualTransactionPDFs() {
                     upiColumn,
                     merchantColumn,
                     amountColumn,
-                    null
+                    transactionDateColumn // Pass the transaction date column
                 );
                 
                 const filename = getFilenameFromRRN(rowData);
@@ -382,7 +381,7 @@ export default function IndividualTransactionPDFs() {
                     upiColumn,
                     merchantColumn,
                     amountColumn,
-                    null
+                    transactionDateColumn // Pass the transaction date column
                 );
                 const filename = getFilenameFromRRN(rowData);
 
@@ -482,7 +481,7 @@ export default function IndividualTransactionPDFs() {
                 upiColumn,
                 merchantColumn,
                 amountColumn,
-                null
+                transactionDateColumn // Pass the transaction date column
             );
 
             // Use the simpler print method for single PDF download
@@ -557,11 +556,22 @@ export default function IndividualTransactionPDFs() {
                     <source src="/1.mp4" type="video/mp4" />
                 </video>
             </div>
+            
+            {/* LOGO SECTION - TOP LEFT */}
+            <header className="relative z-20 pt-8 pl-8">
+                <img 
+                    src="/logo hd.png" // **REMINDER: Update this path to your actual logo file**
+                    alt="Company Logo" 
+                    className="h-20 w-auto object-contain"
+                />
+            </header>
+            {/* END LOGO SECTION */}
+
 
             <div className="relative z-10 pb-12">
 
                 {/* Main content wrapper */}
-                <div className="max-w-7xl mt-[-10px] mx-auto px-4 flex items-center justify-center min-h-[calc(100vh-6rem)]">
+                <div className="max-w-7xl mx-auto px-4 flex items-center justify-center min-h-[calc(100vh-6rem)]">
                     <div className="rounded-lg shadow-lg border border-gray-200 overflow-hidden bg-white w-full">
                         <div className="p-6">
                             <div className="flex items-center space-x-2 mb-4">
