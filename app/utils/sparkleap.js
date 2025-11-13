@@ -1,28 +1,12 @@
-/**
- * Utility functions for generating professional invoice HTML and configurations.
- */
-
-// -----------------------------------------------------------------------------
-// CONFIGURATION AND UTILITIES
-// -----------------------------------------------------------------------------
-
-// --- SPARKLEAP SPECIFIC CONFIGURATION ---
 const SPARKLEAP_ADDRESS = 'NO 195, VINAYAKAR KOVIL, STREET, VANUR TK, Eraiyur,<br/>Tindivanam, Villupuram- 604304 IN<br/>GST: 33ABOCS4605D1ZI';
 const SPARKLEAP_CONFIG = {
     companyName: 'SPARKLEAP TECH SOFTWARE SOLUTIONS PRIVATE LIMITED',
     address: SPARKLEAP_ADDRESS,
     termsAcronym: 'SPKL'
 };
-// ------------------------------------------
 
-/**
- * Retrieves the merchant-specific configuration based on the row data.
- * @param {object} rowData - The current transaction row data.
- * @param {string} merchantColumn - The name of the column containing the merchant name.
- * @returns {{companyName: string, address: string, termsAcronym: string}} The merchant configuration.
- */
 export const getMerchantConfig = (rowData, merchantColumn) => {
-    
+
     if (!merchantColumn || !rowData[merchantColumn]) {
         return SPARKLEAP_CONFIG;
     }
@@ -32,15 +16,10 @@ export const getMerchantConfig = (rowData, merchantColumn) => {
     if (merchantName.includes('sparkleap')) {
         return SPARKLEAP_CONFIG;
     }
-    
+
     return SPARKLEAP_CONFIG;
 };
 
-// -----------------------------------------------------------------------------
-
-/**
- * Attempts to detect required columns based on headers. (Only kept for compatibility with other parts of the system)
- */
 export const detectRequiredColumns = (headers) => {
     const detectedColumns = {};
 
@@ -62,13 +41,6 @@ export const detectRequiredColumns = (headers) => {
     return detectedColumns;
 };
 
-// -----------------------------------------------------------------------------
-
-/**
- * Formats a cell value based on its inferred type (especially for currency and date).
- * FIX APPLIED: Manually constructs DD/MM/YYYY HH:MM format for consistent output 
- * regardless of browser/environment locale settings, ensuring Date/Month/Year order.
- */
 export const formatCellValue = (value, header) => {
     const headerLower = header?.toLowerCase() || '';
 
@@ -76,14 +48,10 @@ export const formatCellValue = (value, header) => {
         if (headerLower.includes('amount') || headerLower.includes('txnamount')) {
             return `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
         }
-        // Handle Excel date number: check if it's a date number (usually large)
         if (value > 10000 && value < 100000) {
-            // This is a rough check for typical Excel date numbers (1927 to 2195)
             const excelDate = new Date((value - 25569) * 86400 * 1000);
-            
-            // Check if the output is a valid date string
+
             if (!isNaN(excelDate.getTime())) {
-                // Manually construct DD/MM/YYYY HH:MM
                 const day = String(excelDate.getUTCDate()).padStart(2, '0');
                 const month = String(excelDate.getUTCMonth() + 1).padStart(2, '0');
                 const year = excelDate.getUTCFullYear();
@@ -93,13 +61,11 @@ export const formatCellValue = (value, header) => {
                 return `${day}/${month}/${year} ${hours}:${minutes}`;
             }
         }
-        
+
         return value.toString();
     }
-    
-    // For Date objects passed from the data hook, format them nicely
+
     if (value instanceof Date && !isNaN(value.getTime())) {
-        // Manually construct DD/MM/YYYY HH:MM
         const day = String(value.getDate()).padStart(2, '0');
         const month = String(value.getMonth() + 1).padStart(2, '0');
         const year = value.getFullYear();
@@ -109,40 +75,23 @@ export const formatCellValue = (value, header) => {
         return `${day}/${month}/${year} ${hours}:${minutes}`;
     }
 
-    // Try to parse string dates that might be in different formats
     if (typeof value === 'string' && value.trim()) {
         const trimmed = value.trim();
-        // Try parsing as a date string
         const parsedDate = new Date(trimmed);
         if (!isNaN(parsedDate.getTime())) {
             const day = String(parsedDate.getDate()).padStart(2, '0');
             const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
             const year = parsedDate.getFullYear();
-            const hours = String(parsedDate.getHours()).padStart(2, '0');
-            const minutes = String(parsedDate.getMinutes()).padStart(2, '0');
+            const hours = String(parsedDate.getUTCHours()).padStart(2, '0');
+            const minutes = String(parsedDate.getUTCMinutes()).padStart(2, '0');
 
             return `${day}/${month}/${year} ${hours}:${minutes}`;
         }
     }
 
-    // For RRN/UTR/UPI (which should generally be strings)
     return String(value || '');
 };
 
-// -----------------------------------------------------------------------------
-// INVOICE GENERATION
-// -----------------------------------------------------------------------------
-
-/**
- * Generates the professional invoice HTML content for a single transaction.
- * @param {object} rowData - The current transaction row data.
- * @param {number|string|null} invoiceNumber - The dynamically generated or set invoice number.
- * @param {string} rrnColumn - The RRN column name.
- * @param {string} upiColumn - The UPI column name.
- * @param {string} merchantColumn - The Merchant column name.
- * @param {string} amountColumn - The Amount column name.
- * @param {string} dateColumn - The Date/Time column name (NEW REQUIRED PARAMETER).
- */
 export const generateProfessionalInvoiceHTML = (
     rowData,
     invoiceNumber,
@@ -150,26 +99,19 @@ export const generateProfessionalInvoiceHTML = (
     upiColumn,
     merchantColumn,
     amountColumn,
-    dateColumn // New required parameter
+    dateColumn
 ) => {
-    // --- Merchant Info ---
     const merchantInfo = getMerchantConfig(rowData, merchantColumn);
 
-    // --- Invoice Number ---
     const invoiceNumberToDisplay = invoiceNumber ? String(invoiceNumber) : '-';
 
-    // --- Transaction Date/Time (FIXED LOGIC) ---
-    // Use the value directly from the selected dateColumn
     let transactionDateTimeDisplay = 'N/A';
     if (dateColumn && rowData[dateColumn] !== undefined) {
-        // This relies on the now-fixed formatCellValue
         transactionDateTimeDisplay = formatCellValue(rowData[dateColumn], dateColumn);
     }
-    
-    // Fallback detection (for amount and VPA)
-    const detectedCols = detectRequiredColumns([]); // Pass empty headers as we rely on explicit column names
 
-    // --- Amount ---
+    const detectedCols = detectRequiredColumns([]);
+
     let amountValue = 0;
     if (amountColumn && rowData[amountColumn] !== undefined && rowData[amountColumn] !== null && rowData[amountColumn] !== '') {
         const rawValue = String(rowData[amountColumn]).replace(/[₹,\s]/g, '');
@@ -180,207 +122,372 @@ export const generateProfessionalInvoiceHTML = (
     }
     const formattedAmount = amountValue.toLocaleString('en-IN', { minimumFractionDigits: 2 });
 
-    // --- Bill To (UPI ID) ---
     const upiIdValue = upiColumn && rowData[upiColumn] ? formatCellValue(rowData[upiColumn], upiColumn) :
         (detectedCols.vpa && rowData[detectedCols.vpa] ? formatCellValue(rowData[detectedCols.vpa], detectedCols.vpa) : 'N/A');
 
-    // --- TXN ID (RRN) ---
     const rrnValue = rrnColumn && rowData[rrnColumn] ? formatCellValue(rowData[rrnColumn], rrnColumn) : 'N/A';
 
     const termsAcronym = merchantInfo.termsAcronym;
+    
+    const COLOR_LIGHT = '#141E30'; 
+    const COLOR_DARK = '#243B55';  
 
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice ${invoiceNumberToDisplay} - ${rrnValue}</title>
+    <title>Payment Statement ${invoiceNumberToDisplay} - ${rrnValue}</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.3; 
-            color: #374151;
-            background-color: #f3f4f6;
+            font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.5;
+            color: #1a202c;
+            background: #f0f4f8;
             padding: 0;
             margin: 0;
-            font-size: 10px; 
-            min-height: 10vh;
+            font-size: 10px;
+            min-height: 100vh;
+            font-weight: 700; 
         }
-        
+
         .container {
-            width: 100%; 
-            max-width: 180mm; 
-            margin: 0 auto; 
+            width: 100%;
+            max-width: 210mm;
+            margin: 0 auto;
             padding: 0;
         }
-        
+
         .invoice {
-            background: white;
-            padding: 5mm 10mm; 
+            background: #ffffff;
+            padding: 8mm; 
             width: 100%;
-            min-height: 277mm; 
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            min-height: auto; 
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
         }
-        
-        .header {
-            margin-bottom: 8mm; 
-        }
-        
-        .invoice-title {
-            font-size: 16px; 
-            font-weight: bold;
-            color: #1f2937;
-            margin-bottom: 3mm; 
-            text-align: center;
-        }
-        
-        .logo-container {
-            display: flex;
-            justify-content: flex-start; 
-            margin-bottom: 4mm;
-        }
-        
-        .company-details {
-            text-align: left; 
-        }
-        
-        .company-name {
-            font-weight: bold;
-            color: #1f2937;
-            margin-bottom: 2mm; 
-            font-size: 14px;
-        }
-        
-        .company-address {
-            font-size: 10px; 
-            color: #000000;
-            line-height: 1.4;
+
+        .accent-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            
             
         }
-        
-        .main-content {
-            margin-bottom: 0px; 
+
+        .header {
+            margin-bottom: 6mm; 
+            padding-bottom: 4mm; 
+            padding-top: 4mm;
+            border-bottom: 1px solid #e2e8f0;
+            position: relative;
+            z-index: 1;
         }
-        
-        .table-container {
-            margin-bottom: 6mm;
-            overflow-x: auto;
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4mm; 
         }
-        
+
+
+    
+
+        .company-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8mm;
+        }
+
+        .company-info {
+            flex: 1;
+        }
+
+        .company-name {
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 2mm;
+            font-size: 14px;
+            line-height: 1.3;
+        }
+
+        .company-address {
+            font-size: 10px;
+            color: #718096;
+            line-height: 1.6;
+            font-weight: 700;
+        }
+
+        .invoice-ids {
+            text-align: right;
+            min-width: 70mm;
+        }
+
+        .id-row {
+            margin-bottom: 2mm; 
+            background: #f8fafc;
+            padding: 3mm;
+            border-radius: 8px;
+            border-left: 4px solid ${COLOR_LIGHT}; 
+        }
+
+        .id-label {
+            font-size: 8px;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1mm;
+            font-weight: 800;
+        }
+
+        .id-value {
+            font-size: 11px;
+            color: #2d3748;
+            font-weight: 900;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+
+        .billing-section {
+            margin-bottom: 6mm; 
+            background: #f8fafc;
+            padding: 5mm; 
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        .section-header {
+            font-size: 12px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 3mm; 
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            position: relative;
+            padding-left: 4mm;
+        }
+
+        .section-header::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(180deg, ${COLOR_LIGHT} 0%, ${COLOR_DARK} 100%);
+            border-radius: 2px;
+        }
+
+        .billing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4mm; 
+            position: relative;
+            z-index: 1;
+        }
+
+        .billing-item {
+            background: white;
+            padding: 4mm;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .billing-label {
+            font-size: 8px;
+            color: #718096;
+            text-transform: uppercase;
+            margin-bottom: 1.5mm; 
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .billing-value {
+            font-size: 10px;
+            color: #2d3748;
+            font-weight: 800;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+
+        .invoice-details {
+            margin-bottom: 6mm; 
+        }
+
+        .table-wrapper {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
         .invoice-table {
             width: 100%;
             border-collapse: collapse;
-            border: 1px solid black; 
-            font-size: 10px; 
+            font-size: 10px;
         }
-        
+
+        .invoice-table thead {
+            background: linear-gradient(135deg, ${COLOR_LIGHT} 0%, ${COLOR_DARK} 100%);
+        }
+
         .invoice-table th {
-            border: 1px solid black;
-            padding: 2.5mm 3mm; 
+            color: #ffffff; 
+            padding: 3mm 3mm; 
             text-align: center;
-            background-color: #FFDA64 !important;
-            color: #1f2937 !important;
-            font-weight: 600;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: 1px;
         }
-        
+
         .invoice-table td {
-            border: 1px solid black;
-            padding: 2.5mm 3mm; 
+            padding: 3mm 3mm; 
             text-align: center;
-            font-weight: normal;
+            color: #4a5568;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+            font-weight: 700;
         }
-        
-        .center {
-            text-align: center;
+
+        .invoice-table tbody tr:nth-child(odd) td {
+            background: #f7fafc;
         }
-        
-        .right {
-            text-align: right;
-        }
-        
+
         .total-row {
-            background-color: #f9fafb !important;
+            background: linear-gradient(135deg, ${COLOR_LIGHT} 0%, ${COLOR_DARK} 100%) !important;
         }
-        
+
         .total-row td {
-            font-weight: bold !important;
+            color: #ffffff !important;
+            font-weight: 900 !important;
+            font-size: 11px;
+            border: none !important;
+            padding: 3mm 3mm !important;
         }
-        
-        .total-label {
-            font-weight: 600;
+
+        .amount-highlight {
+            background: linear-gradient(135deg, ${COLOR_LIGHT} 0%, ${COLOR_DARK} 100%);
+            color: white;
+            padding: 5mm; 
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 6mm; 
+            box-shadow: 0 6px 20px rgba(44, 62, 80, 0.5);
+            position: relative;
         }
-        
+
+        .amount-label {
+            font-size: 11px;
+            opacity: 0.95;
+            margin-bottom: 2mm;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        .amount-value {
+            font-size: 30px; 
+            font-weight: 900;
+            letter-spacing: 2px;
+        }
+
         .terms {
-            margin-top: 10mm;
-            page-break-inside: avoid;
+            background: #f8fafc;
+            border: 1px solid #bdc3c7;
+            border-left: 4px solid #141E30;
+            padding: 6mm;
+            border-radius: 8px;
+            margin-top: 6mm; 
         }
-        
+
         .terms h3 {
-            font-weight: 600;
-            color: #1f2937;
+            font-weight: 800;
+            color: #141E30;
             margin-bottom: 3mm;
-            font-size: 12px; 
-            text-decoration: underline;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        
-        .terms-content {
-            font-size: 10px; 
-            color: #000000; 
-            
-            line-height: 1.2; 
-            letter-spacing: 0.4px; 
+
+        .terms-list {
+            list-style: none;
+            padding: 0;
         }
-        
-        .terms-content p {
+
+        .terms-list li {
+            font-size: 10px;
+            color: #141E30;
+            line-height: 1.6; 
             margin-bottom: 2mm; 
+            padding-left: 6mm;
+            position: relative;
+            font-weight: 500;
         }
-        
+
+        .terms-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #141E30;
+            font-weight: 900;
+            font-size: 14px;
+        }
+
+
         @media print {
             body {
                 margin: 0;
                 padding: 0;
                 background: white;
             }
-            
+
             .container {
                 padding: 0;
                 width: 100%;
                 max-width: none;
                 margin: 0;
             }
-            
+
             .invoice {
+                padding: 8mm; 
+                min-height: 296mm; 
+                max-height: 296mm; 
                 box-shadow: none;
                 border-radius: 0;
-                padding: 12mm 10mm;
-                min-height: 277mm;
+                overflow: hidden; 
             }
-            
+
             @page {
                 size: A4 portrait;
-                margin: 10mm;
+                margin: 0; 
             }
-            
-            .invoice-table th {
-                background-color: #FFDA64 !important;
+
+            .invoice-badge,
+            .invoice-table thead,
+            .total-row,
+            .amount-highlight,
+            .logo-section,
+            .billing-section,
+            .terms,
+            .id-row,
+            .billing-item,
+            .accent-bar,
+            .document-title {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
-            }
-            
-            .total-row {
-                background-color: #f9fafb !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-            
-            .total-row td {
-                font-weight: bold !important;
             }
         }
     </style>
@@ -388,114 +495,110 @@ export const generateProfessionalInvoiceHTML = (
 <body>
     <div class="container">
         <div class="invoice">
+            <div class="accent-bar"></div>
+
             <div class="header">
-                <h1 class="invoice-title">INVOICE</h1>
-                <div class="logo-container">
-                    <div class="gamepad-icon">
-                        <img 
-                            src="/logo.png" 
-                            alt="Logo" 
-                            style="width: 75px; height: auto; border-radius: 12px; object-fit: cover;"
+                <div class="header-top">
+
+                    <div class="logo-section">
+                        <img
+                            src="/Sparkleap.png"
+                            alt="Company Logo"
+                            style="width: 200px; height: auto; display: block;"
                         />
                     </div>
                 </div>
-                <div class="company-details">
-                    <h2 class="company-name">${merchantInfo.companyName}</h2>
-                    <p class="company-address">
-                        ${merchantInfo.address.replace(/<br\/>/g, '<br/>')}
-                    </p>
+
+                <div class="company-section">
+                    <div class="company-info">
+                        <h2 class="company-name">${merchantInfo.companyName}</h2>
+                        <p class="company-address">
+                            ${merchantInfo.address.replace(/<br\/>/g, '<br/>')}
+                        </p>
+                    </div>
+
+                    <div class="invoice-ids">
+                        <div class="id-row">
+                            <div class="id-label">Invoice Number</div>
+                            <div class="id-value">${invoiceNumberToDisplay}</div>
+                        </div>
+                        <div class="id-row">
+                            <div class="id-label">Transaction ID</div>
+                            <div class="id-value">${rrnValue}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="main-content">
-                <div class="table-container">
-                    <table class="invoice-table" style="table-layout: fixed;">
-                        <thead>
-                            <tr>
-                                <th style="width: 33.33%; padding: 1.5mm 2mm;">Bill to</th>
-                                <th style="width: 33.33%; padding: 1.5mm 2mm;">Transaction Date & Time</th>
-                                <th style="width: 33.34%; padding: 1.5mm 2mm;">Wallet Load Date & Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="center" style="padding: 1.5mm 2mm;">${upiIdValue}</td>
-                                <td class="center" style="padding: 1.5mm 2mm;">${transactionDateTimeDisplay}</td>
-                                <td class="center" style="padding: 1.5mm 2mm;">${transactionDateTimeDisplay}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div style="display: flex; gap: 6mm; margin-bottom: 6mm; align-items: flex-end;">
-                    <div style="width: 33.33%;">
-                        <table class="invoice-table">
-                            <thead>
-                                <tr>
-                                    <th style="padding: 1.5mm 3mm;">TXN ID</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="center" style="padding: 1.5mm 3mm;">${rrnValue}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+
+            <div class="billing-section">
+                <div class="section-header">Payment Information</div>
+                <div class="billing-grid">
+                    <div class="billing-item">
+                        <div class="billing-label">Bill To</div>
+                        <div class="billing-value">${upiIdValue}</div>
                     </div>
-                    <div style="width: 30%; margin-left: 40mm;">
-                        <table class="invoice-table" style="table-layout: fixed;">
-                            <tbody>
-                                <tr>
-                                    <td class="center" style="width: 10px; padding: 1mm 1.5mm; font-weight: bold;">Invoice No.</td>
-                                    <td class="center" style="width: 10px; padding: 1mm 1.5mm; font-weight: bold;">${invoiceNumberToDisplay}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="billing-item">
+                        <div class="billing-label">Transaction Date</div>
+                        <div class="billing-value">${transactionDateTimeDisplay}</div>
+                    </div>
+                    <div class="billing-item">
+                        <div class="billing-label">Wallet Load Date</div>
+                        <div class="billing-value">${transactionDateTimeDisplay}</div>
                     </div>
                 </div>
-                
-                <div class="table-container">
+            </div>
+
+            <div class="invoice-details">
+                <div class="section-header">Transaction Details</div>
+                <div class="table-wrapper">
                     <table class="invoice-table">
                         <thead>
                             <tr>
-                                <th>Sl No.</th>
-                                <th>Description</th>
-                                <th>Quantity</th>
-                                <th>Unit Price</th>
-                                <th>Gross Amount</th>
-                                <th>Tax Amount</th>
-                                <th>Net Amount</th>
+                                <th style="width: 8%;">Sl No.</th>
+                                <th style="width: 30%;">Description</th>
+                                <th style="width: 10%;">Quantity</th>
+                                <th style="width: 15%;">Unit Price</th>
+                                <th style="width: 15%;">Gross Amount</th>
+                                <th style="width: 12%;">Tax Amount</th>
+                                <th style="width: 15%;">Net Amount</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td class="center">1</td>
-                                <td class="center">Wallet loading</td>
-                                <td class="center">1</td>
-                                <td class="center">₹ ${formattedAmount}</td>
-                                <td class="center">₹ ${formattedAmount}</td>
-                                <td class="center">-</td>
-                                <td class="center">₹ ${formattedAmount}</td>
+                                <td>1</td>
+                                <td>Wallet Loading</td>
+                                <td>1</td>
+                                <td>₹ ${formattedAmount}</td>
+                                <td>₹ ${formattedAmount}</td>
+                                <td>—</td>
+                                <td>₹ ${formattedAmount}</td>
                             </tr>
                             <tr class="total-row">
-                                <td colspan="4" class="center total-label">Total</td>
-                                <td class="center">₹ ${formattedAmount}</td>
-                                <td class="center">0</td>
-                                <td class="center">₹ ${formattedAmount}</td>
+                                <td colspan="4">TOTAL</td>
+                                <td>₹ ${formattedAmount}</td>
+                                <td>₹ 0.00</td>
+                                <td>₹ ${formattedAmount}</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                
-                <div class="terms">
-                    <h3>Terms:</h3>
-                    <div class="terms-content">
-                        <p>1. By receiving this invoice, the user has paid the appropriate fees to ${termsAcronym} through Payment Gate and accepts the company's terms and conditions in connection with the transaction.</p>
-                        <p>2. All the invoices are raised against the UPI id through which the payment is collected</p>
-                        <p>3. This is computer generated invoice and doesn't require a seal and signature.</p>
-                    </div>
-                </div>
             </div>
+
+            <div class="amount-highlight">
+                <div class="amount-label">Total Amount Paid</div>
+                <div class="amount-value">₹ ${formattedAmount}</div>
+            </div>
+
+            <div class="terms">
+                <h3>Terms & Conditions</h3>
+                <ul class="terms-list">
+                    <li>By receiving this receipt, the user has paid the appropriate fees to ${termsAcronym} through Payment Gateway and accepts the company's terms and conditions in connection with the transaction.</li>
+                    <li>All receipts are issued against the UPI ID through which the payment is collected and verified.</li>
+                    <li>This is a computer-generated receipt and does not require a physical seal or signature for validation.</li>
+                </ul>
+            </div>
+
+
         </div>
     </div>
 </body>

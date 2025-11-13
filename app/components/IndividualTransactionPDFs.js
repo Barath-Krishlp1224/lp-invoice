@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, DollarSign, Copy, Search, Tag, Eye } from 'lucide-react';
-import SplitText from './SplitText';
-import useDataProcessing from '../hooks/useDataProcessing';
-import { generateProfessionalInvoiceHTML, formatCellValue, detectRequiredColumns } from '../utils/invoiceConfig';
+import SplitText from './SplitText'; // Assuming this component exists
+import useDataProcessing from '../hooks/useDataProcessing'; // Assuming this hook exists
+import { generateProfessionalInvoiceHTML, formatCellValue, detectRequiredColumns } from '../utils/invoiceConfig'; // Assuming this utility file exists
 
 export default function IndividualTransactionPDFs() {
     const [file, setFile] = useState(null);
@@ -20,7 +20,7 @@ export default function IndividualTransactionPDFs() {
     const [auxfordInvoiceStart, setAuxfordInvoiceStart] = useState('');
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     
-    // **NEW STATE FOR TRANSACTION DATE COLUMN**
+    // **STATE FOR TRANSACTION DATE COLUMN**
     const [transactionDateColumn, setTransactionDateColumn] = useState('');
 
     const {
@@ -559,8 +559,10 @@ export default function IndividualTransactionPDFs() {
             
             {/* LOGO SECTION - TOP LEFT */}
             <header className="relative z-20 pt-8 pl-8">
+                {/* NOTE: You should ensure this logo is a generic one or one of your choosing for the application UI,
+                   The dynamic logos are handled within the generated invoice HTML */}
                 <img 
-                    src="/logo hd.png" // **REMINDER: Update this path to your actual logo file**
+                    src="/logo hd.png" 
                     alt="Company Logo" 
                     className="h-20 w-auto object-contain"
                 />

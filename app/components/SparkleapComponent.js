@@ -270,14 +270,16 @@ export default function IndividualTransactionPDFs() {
             const zip = new window.JSZip();
             const totalRows = preview.data.length;
             
+            // Configuration for html2pdf to maximize single-page success
             const pdfOptions = {
-                margin: [1, 5, 1, 5],
+                // Reduced margins for better fit on A4
+                margin: [5, 5, 5, 5], 
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: {
                     scale: 2,
                     logging: false,
                     allowTaint: true,
-                    useCORS: true
+                    useCORS: true,
                 },
                 jsPDF: {
                     unit: 'mm',
@@ -285,7 +287,8 @@ export default function IndividualTransactionPDFs() {
                     orientation: 'portrait',
                     compress: true
                 },
-                pagebreak: { mode: 'css' } 
+                // Crucial: Avoid internal page breaks when generating individual documents
+                pagebreak: { mode: 'avoid-all' } 
             };
 
             for (let i = 0; i < totalRows; i++) {
@@ -293,7 +296,7 @@ export default function IndividualTransactionPDFs() {
                 const actualRowIndex = i;
                 const currentInvoiceNumber = calculateInvoiceNumber(actualRowIndex);
 
-                const htmlContent = generateProfessionalInvoiceHTML(
+                let htmlContent = generateProfessionalInvoiceHTML(
                     rowData,
                     currentInvoiceNumber,
                     rrnColumn,
@@ -302,10 +305,14 @@ export default function IndividualTransactionPDFs() {
                     amountColumn,
                     dateColumn
                 );
+
+                const contentToConvert = htmlContent;
+                
                 const filename = getFilenameFromRRN(rowData);
 
+                // Wait for the PDF to be generated
                 const pdfBlob = await window.html2pdf()
-                    .from(htmlContent) 
+                    .from(contentToConvert) 
                     .set(pdfOptions)
                     .output('blob');
 
@@ -314,6 +321,7 @@ export default function IndividualTransactionPDFs() {
                 setZipProgress(Math.round(((i + 1) / totalRows) * 100));
 
                 if (i % 5 === 0) {
+                    // Slight pause to prevent UI freezing
                     await new Promise(resolve => setTimeout(resolve, 0));
                 }
             }
