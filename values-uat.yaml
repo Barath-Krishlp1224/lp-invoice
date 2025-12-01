@@ -1,0 +1,52 @@
+name: lp-invoice-ms
+namespace: lp
+
+replicaCount: 1
+
+image:
+  repository: "" #values will pick from jenkins build
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "" #values will pick from jenkins build
+
+
+service:
+  targetPort: 3002
+
+#### Resource allocation To Pod/application/container
+resources:
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 500m
+    memory: 300Mi
+
+##### HPA ############
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+
+
+######## Application health Check
+readinessProbe:
+  httpGet:
+    path: /
+    port: 3002
+    scheme: HTTP
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  
+livenessProbe:
+  httpGet:
+    path: /
+    port: 3002
+    scheme: HTTP
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+apisix:
+  hosts:
+    - lp-uat.lemonpay.in # here we need add IP for testing purpose only 
+  paths:
+    - "/*"
