@@ -152,9 +152,14 @@ const MERCHANT_CONFIGS = {
             companyName: 'TECHTERRA SOFTWARE SOLUTIONS PRIVATE LIMITED',
             address: 'NO 15, MANDAPA STREET, TYR-1 ANAIKUDI, THIRUVAIYARU, THANJAVUR - 613204<br/>GST: 33AALCT6101F1ZN',
             receiptEntityName: 'TTLP',
-            logoPath: '/assets/branding/default-merchant-logo.png',
+            logoPath: '/assets/merchants/Techterra.png',
             themeColor: '#6d4c41',
-            aliases: ['techterra', 'techterrasoftwaresolutionsprivatelimited'],
+            aliases: [
+                'techterra',
+                'tectera',
+                'tecterra',
+                'techterrasoftwaresolutionsprivatelimited',
+            ],
         },
         voltiq: {
             key: 'voltiq',

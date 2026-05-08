@@ -757,6 +757,81 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                 </div>
 
                                 <div className="mb-4">
+                                    <h4 className="text-sm font-medium text-gray-900 mb-3">Select Required Columns</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                <FileText className="w-3 h-3 inline mr-1 text-green-600" />Transaction Date *
+                                            </label>
+                                            <select value={dateColumn} onChange={(e) => setDateColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                                <option value="">Select</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
+                                                    <option key={header} value={header}>{header}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                <Building2 className="w-3 h-3 inline mr-1 text-green-600" />Merchant {isOthersWorkspace ? '*' : '(Optional)'}
+                                            </label>
+                                            <select value={merchantColumn} onChange={(e) => setMerchantColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                                <option value="">Select</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
+                                                    <option key={header} value={header}>{header}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                <FileText className="w-3 h-3 inline mr-1 text-green-600" />Customer Name (Optional)
+                                            </label>
+                                            <select value={customerNameColumn} onChange={(e) => setCustomerNameColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                                <option value="">Select</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
+                                                    <option key={header} value={header}>{header}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                <DollarSign className="w-3 h-3 inline mr-1" />Amount *
+                                            </label>
+                                            <select value={amountColumn} onChange={(e) => setAmountColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                                <option value="">Select</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
+                                                    <option key={header} value={header}>{header}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                <Hash className="w-3 h-3 inline mr-1" />RRN/UTR *
+                                            </label>
+                                            <select value={rrnColumn} onChange={(e) => setRrnColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                                <option value="">Select</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
+                                                    <option key={header} value={header}>{header}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                <FileText className="w-3 h-3 inline mr-1" />UPI ID *
+                                            </label>
+                                            <select value={upiColumn} onChange={(e) => setUpiColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                                <option value="">Select</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
+                                                    <option key={header} value={header}>{header}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <p className="mt-3 text-xs text-gray-500">
+                                        If Excel headers are not detected correctly, choose the correct column here and the preview boxes below will update immediately.
+                                    </p>
+                                </div>
+
+                                <div className="mb-4">
                                     <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                                         <Copy className="w-4 h-4 text-green-600 mr-2" />Duplicate Detection
                                     </h4>
