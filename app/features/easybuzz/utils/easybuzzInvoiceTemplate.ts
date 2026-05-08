@@ -15,6 +15,109 @@ const hexToRgba = (hex, alpha) => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const pad2 = (value) => String(value).padStart(2, '0');
+
+const formatDateTimeParts = (year, month, day, hours, minutes) => {
+    const datePart = `${pad2(day)}/${pad2(month)}/${year}`;
+
+    if (hours === undefined || minutes === undefined) {
+        return datePart;
+    }
+
+    return `${datePart} ${pad2(hours)}:${pad2(minutes)}`;
+};
+
+const formatExcelSerialDate = (value) => {
+    const excelEpoch = Date.UTC(1899, 11, 30);
+    const date = new Date(excelEpoch + Math.round(value * 86400 * 1000));
+
+    if (isNaN(date.getTime())) {
+        return null;
+    }
+
+    return formatDateTimeParts(
+        date.getUTCFullYear(),
+        date.getUTCMonth() + 1,
+        date.getUTCDate(),
+        date.getUTCHours(),
+        date.getUTCMinutes()
+    );
+};
+
+const formatDateString = (value) => {
+    const trimmed = value.trim();
+
+    const isoLikeMatch = trimmed.match(
+        /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2})(?::(\d{1,2}))(?::\d{1,2})?(?:\.\d+)?)?(?:\s*(AM|PM))?(?:Z|[+-]\d{2}:?\d{2})?$/i
+    );
+
+    if (isoLikeMatch) {
+        let hours = isoLikeMatch[4];
+        const minutes = isoLikeMatch[5];
+        const meridiem = isoLikeMatch[6]?.toUpperCase();
+
+        if (hours !== undefined && meridiem) {
+            let normalizedHours = Number(hours);
+            if (meridiem === 'PM' && normalizedHours < 12) normalizedHours += 12;
+            if (meridiem === 'AM' && normalizedHours === 12) normalizedHours = 0;
+            hours = normalizedHours;
+        }
+
+        return formatDateTimeParts(
+            Number(isoLikeMatch[1]),
+            Number(isoLikeMatch[2]),
+            Number(isoLikeMatch[3]),
+            hours !== undefined ? Number(hours) : undefined,
+            minutes !== undefined ? Number(minutes) : undefined
+        );
+    }
+
+    const slashDateMatch = trimmed.match(
+        /^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})(?:[ ,T]+(\d{1,2})(?::(\d{1,2}))(?::\d{1,2})?\s*(AM|PM)?)?$/i
+    );
+
+    if (slashDateMatch) {
+        const first = Number(slashDateMatch[1]);
+        const second = Number(slashDateMatch[2]);
+        const year = slashDateMatch[3].length === 2 ? `20${slashDateMatch[3]}` : slashDateMatch[3];
+        const isDayFirst = first > 12;
+        const isMonthFirst = second > 12 || (!isDayFirst && first <= 12 && second <= 12);
+        const day = isMonthFirst ? second : first;
+        const month = isMonthFirst ? first : second;
+        let hours = slashDateMatch[4];
+        const minutes = slashDateMatch[5];
+        const meridiem = slashDateMatch[6]?.toUpperCase();
+
+        if (hours !== undefined && meridiem) {
+            let normalizedHours = Number(hours);
+            if (meridiem === 'PM' && normalizedHours < 12) normalizedHours += 12;
+            if (meridiem === 'AM' && normalizedHours === 12) normalizedHours = 0;
+            hours = normalizedHours;
+        }
+
+        return formatDateTimeParts(
+            Number(year),
+            month,
+            day,
+            hours !== undefined ? Number(hours) : undefined,
+            minutes !== undefined ? Number(minutes) : undefined
+        );
+    }
+
+    const parsedDate = new Date(trimmed);
+    if (!isNaN(parsedDate.getTime())) {
+        return formatDateTimeParts(
+            parsedDate.getFullYear(),
+            parsedDate.getMonth() + 1,
+            parsedDate.getDate(),
+            parsedDate.getHours(),
+            parsedDate.getMinutes()
+        );
+    }
+
+    return trimmed;
+};
+
 export const detectRequiredColumns = (headers) => {
     const detectedColumns = {};
 
@@ -44,16 +147,9 @@ export const formatCellValue = (value, header) => {
             return `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
         }
         if (value > 10000 && value < 100000) {
-            const excelDate = new Date((value - 25569) * 86400 * 1000);
-
-            if (!isNaN(excelDate.getTime())) {
-                const day = String(excelDate.getUTCDate()).padStart(2, '0');
-                const month = String(excelDate.getUTCMonth() + 1).padStart(2, '0');
-                const year = excelDate.getUTCFullYear();
-                const hours = String(excelDate.getUTCHours()).padStart(2, '0');
-                const minutes = String(excelDate.getUTCMinutes()).padStart(2, '0');
-
-                return `${day}/${month}/${year} ${hours}:${minutes}`;
+            const formattedExcelDate = formatExcelSerialDate(value);
+            if (formattedExcelDate) {
+                return formattedExcelDate;
             }
         }
 
@@ -61,27 +157,17 @@ export const formatCellValue = (value, header) => {
     }
 
     if (value instanceof Date && !isNaN(value.getTime())) {
-        const day = String(value.getDate()).padStart(2, '0');
-        const month = String(value.getMonth() + 1).padStart(2, '0');
-        const year = value.getFullYear();
-        const hours = String(value.getHours()).padStart(2, '0');
-        const minutes = String(value.getMinutes()).padStart(2, '0');
-
-        return `${day}/${month}/${year} ${hours}:${minutes}`;
+        return formatDateTimeParts(
+            value.getFullYear(),
+            value.getMonth() + 1,
+            value.getDate(),
+            value.getHours(),
+            value.getMinutes()
+        );
     }
 
     if (typeof value === 'string' && value.trim()) {
-        const trimmed = value.trim();
-        const parsedDate = new Date(trimmed);
-        if (!isNaN(parsedDate.getTime())) {
-            const day = String(parsedDate.getDate()).padStart(2, '0');
-            const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
-            const year = parsedDate.getFullYear();
-            const hours = String(parsedDate.getUTCHours()).padStart(2, '0');
-            const minutes = String(parsedDate.getUTCMinutes()).padStart(2, '0');
-
-            return `${day}/${month}/${year} ${hours}:${minutes}`;
-        }
+        return formatDateString(value);
     }
 
     return String(value || '');

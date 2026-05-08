@@ -579,22 +579,6 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         }
     };
     
-    const reformatDateString = (dateString) => {
-        if (!dateString) return '';
-        const parts = String(dateString).match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})(.*)/);
-
-        if (parts) {
-            const month = parts[1].padStart(2, '0');
-            const day = parts[2].padStart(2, '0');
-            const year = parts[3];
-            const time = parts[4].trim() ? ` ${parts[4].trim()}` : '';
-            
-            return `${day}/${month}/${year}${time}`;
-        }
-        
-        return dateString;
-    };
-
     const isReadyToGenerate = rrnColumn && upiColumn && amountColumn && dateColumn && (!isOthersWorkspace || merchantColumn);
 
     return (
@@ -1016,8 +1000,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                                         <tr key={actualRowIndex} className="hover:bg-gray-50 transition-colors">
                                                             <td className="px-4 py-2 text-xs font-medium text-gray-900">{actualRowIndex + 1}</td>
                                                             {dateColumn && (
-                                                                <td className="px-4 py-2 text-xs text-gray-700">
-                                                                    {reformatDateString(row[dateColumn])}
+                                                            <td className="px-4 py-2 text-xs text-gray-700">
+                                                                    {formatCellValue(row[dateColumn], dateColumn)}
                                                                 </td>
                                                             )}
                                                             {rrnColumn && (
