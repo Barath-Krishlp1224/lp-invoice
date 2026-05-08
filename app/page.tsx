@@ -3,3 +3,4 @@ import MerchantSelectionPage from "./features/home/components/MerchantSelectionP
 export default function Home() {
   return <MerchantSelectionPage />;
 }
+    
