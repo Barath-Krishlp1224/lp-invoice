@@ -1,10 +1,11 @@
-// hooks/useDataProcessing.js
+// @ts-nocheck
+// hooks/useInvoiceDataProcessing.ts
 
 import { useState, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { detectRequiredColumns } from '../utils/invoiceConfig';
+import { detectRequiredColumns } from '../utils/columnDetection';
 
-const useDataProcessing = (file) => {
+const useInvoiceDataProcessing = (file) => {
     const [loading, setLoading] = useState(false);
     const [preview, setPreview] = useState(null);
     const [error, setError] = useState(null);
@@ -246,7 +247,7 @@ const useDataProcessing = (file) => {
 
             const possibleRrnColumns = result.headers.filter(header => {
                 const lower = header.toLowerCase();
-                return lower.includes('rrn') || lower.includes('reference') || lower.includes('ref') || lower.includes('transactionid');
+                return lower.includes('rrn') || lower.includes('utr') || lower.includes('reference') || lower.includes('ref') || lower.includes('transactionid');
             });
 
             if (possibleRrnColumns.length > 0) {
@@ -324,4 +325,4 @@ const useDataProcessing = (file) => {
     };
 };
 
-export default useDataProcessing;
+export default useInvoiceDataProcessing;
