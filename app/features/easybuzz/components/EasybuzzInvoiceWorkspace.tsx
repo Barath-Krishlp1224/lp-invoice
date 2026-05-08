@@ -7,7 +7,7 @@ import { APP_ASSETS } from '../../../constants/assets';
 import useInvoiceDataProcessing from '../../file-processing/hooks/useInvoiceDataProcessing';
 import { generateProfessionalInvoiceHTML, formatCellValue } from '../utils/easybuzzInvoiceTemplate'; 
 import { detectRequiredColumns as detectPreviewColumns } from '../../file-processing/utils/columnDetection';
-import { getMerchantCatalog, getMerchantKeyFromName } from '../utils/merchantConfigs';
+import { getMerchantCatalog, getMerchantConfigByKey, getMerchantKeyFromName } from '../utils/merchantConfigs';
 
 export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' }) {
     const [file, setFile] = useState(null);
@@ -21,7 +21,6 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
     const [zipProgress, setZipProgress] = useState(0);
     const [dateColumn, setDateColumn] = useState(''); 
     const [customerNameColumn, setCustomerNameColumn] = useState('');
-    const [invoiceStarts, setInvoiceStarts] = useState({ sparkleap: '' });
     const [selectedMerchantFilters, setSelectedMerchantFilters] = useState([]);
     const [isMerchantFilterOpen, setIsMerchantFilterOpen] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -151,7 +150,30 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         return `${cleanFilename}` || `${rowData._rowIndex}`;
     };
 
-    const getMerchantStartValue = (merchantKey) => invoiceStarts[merchantKey] || '';
+    const getCurrentInvoiceDatePrefix = () => {
+        const currentDate = new Date();
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const year = String(currentDate.getFullYear()).slice(-2);
+
+        return `${day}${month}${year}`;
+    };
+
+    const getMerchantInvoicePrefix = (merchantKey) => {
+        const merchantConfig = getMerchantConfigByKey(merchantKey, workspaceMode);
+        const normalizedPrefix = String(merchantConfig?.receiptEntityName || merchantConfig?.displayName || '')
+            .replace(/LP$/i, '')
+            .replace(/[^a-z]/gi, '')
+            .toUpperCase();
+
+        return normalizedPrefix.slice(0, 2);
+    };
+
+    const buildInvoiceNumber = (merchantKey) => {
+        const merchantConfig = getMerchantConfigByKey(merchantKey, workspaceMode);
+        const merchantPrefix = getMerchantInvoicePrefix(merchantKey);
+        return `${merchantPrefix}${getCurrentInvoiceDatePrefix()}${merchantConfig?.invoiceCode ?? ''}`;
+    };
 
     const getRowMerchantKey = (rowData) => {
         if (!isOthersWorkspace) {
@@ -202,29 +224,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
 
         const rowData = preview.data[rowIndex];
         const merchantKey = getRowMerchantKey(rowData);
-        const invoiceStart = getMerchantStartValue(merchantKey);
 
-        if (!invoiceStart) {
-            return null;
-        }
-
-        const relevantRowsCount = preview.data
-            .slice(0, rowIndex + 1)
-            .filter((row) => getRowMerchantKey(row) === merchantKey).length;
-        
-        const numericMatch = invoiceStart.match(/\d+/);
-        const prefix = invoiceStart.replace(/\d+/g, '');
-        
-        if (numericMatch) {
-            const startNum = parseInt(numericMatch[0], 10);
-            const numericWidth = numericMatch[0].length;
-            
-            const newNum = startNum + relevantRowsCount - 1;
-            
-            return prefix + String(newNum).padStart(numericWidth, '0');
-        }
-        
-        return invoiceStart;
+        return buildInvoiceNumber(merchantKey);
     };
 
 
@@ -573,7 +574,6 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         setIsMerchantFilterOpen(false);
         setDuplicateColumn('');
         setShowDuplicates(false);
-        setInvoiceStarts({ sparkleap: '' }); 
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -696,33 +696,23 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
 
                                 <div className="mb-4 p-4 bg-white rounded-lg border border-gray-200">
                                     <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                                        <Tag className="w-4 h-4 text-green-600 mr-2" />Starting Invoice Number
+                                        <Tag className="w-4 h-4 text-green-600 mr-2" />Invoice Number Format
                                     </h4>
                                     <div className="grid grid-cols-1 gap-4">
                                         <div>
-                                            <label htmlFor="sparkleap-invoice-start" className="block text-xs font-medium text-gray-700 mb-1">
-                                                {isOthersWorkspace ? 'Merchant' : 'Sparkleap Merchant'}
-                                            </label>
+                                            <p className="mb-2 text-xs text-gray-600">
+                                                Invoice numbers are auto-generated as a 2-letter merchant prefix, today&apos;s date in `ddmmyy` format, and then the merchant code.
+                                            </p>
                                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                                                 {getVisibleMerchantConfigs().map((config) => (
-                                                    <div key={config.key}>
-                                                        <label htmlFor={`invoice-start-${config.key}`} className="block text-xs font-medium text-gray-700 mb-1">
-                                                            {config.displayName}
-                                                        </label>
-                                                        <input
-                                                            id={`invoice-start-${config.key}`}
-                                                            type="text"
-                                                            value={getMerchantStartValue(config.key)}
-                                                            onChange={(e) => {
-                                                                const nextValue = e.target.value;
-                                                                setInvoiceStarts((prev) => ({
-                                                                    ...prev,
-                                                                    [config.key]: nextValue,
-                                                                }));
-                                                            }}
-                                                            placeholder="e.g., SL101 or 101"
-                                                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                                        />
+                                                    <div key={config.key} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
+                                                        <div className="text-xs font-medium text-gray-700">{config.companyName}</div>
+                                                        <div className="mt-1 text-sm font-semibold text-gray-900">
+                                                            {buildInvoiceNumber(config.key)}
+                                                        </div>
+                                                        <div className="mt-1 text-[11px] text-gray-500">
+                                                            Merchant Code: {config.invoiceCode || 'Not configured'}
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
