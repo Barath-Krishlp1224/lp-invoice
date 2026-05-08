@@ -153,16 +153,6 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
 
     const getMerchantStartValue = (merchantKey) => invoiceStarts[merchantKey] || '';
 
-    const getDocumentName = (rowData, invoiceNumber) => {
-        const merchantName = merchantColumn && rowData?.[merchantColumn]
-            ? formatCellValue(rowData[merchantColumn], merchantColumn)
-            : 'Merchant';
-        const safeMerchantName = merchantName.replace(/[^a-zA-Z0-9\s_-]/g, '').trim().replace(/\s+/g, '_');
-        const safeInvoiceNumber = String(invoiceNumber || 'Invoice').replace(/[^a-zA-Z0-9_-]/g, '_');
-
-        return `${safeInvoiceNumber}_${safeMerchantName || 'Merchant'}`;
-    };
-
     const getRowMerchantKey = (rowData) => {
         if (!isOthersWorkspace) {
             return 'sparkleap';
@@ -364,7 +354,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                     workspaceMode
                 );
                 
-                const filename = getDocumentName(rowData, currentInvoiceNumber);
+                const filename = getFilenameFromRRN(rowData);
                 
                 const newWindow = window.open('about:blank', `invoice-${i}`, 'width=800,height=600');
                 if (newWindow) {
@@ -459,7 +449,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
 
                 const contentToConvert = htmlContent;
                 
-                const filename = getDocumentName(rowData, currentInvoiceNumber);
+                const filename = getFilenameFromRRN(rowData);
 
                 // Wait for the PDF to be generated
                 const pdfBlob = await window.html2pdf()
@@ -529,7 +519,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 workspaceMode
             );
 
-            downloadAsPDF(htmlContent, getDocumentName(rowData, invoiceNumber));
+            downloadAsPDF(htmlContent, getFilenameFromRRN(rowData));
         } catch (err) {
             console.error('Single PDF generation error:', err);
             setError('Error generating PDF: ' + err.message);
@@ -563,7 +553,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 workspaceMode
             );
 
-            previewInvoice(htmlContent, `preview-${getDocumentName(rowData, invoiceNumber)}`);
+            previewInvoice(htmlContent, `preview-${getFilenameFromRRN(rowData)}`);
         } catch (err) {
             console.error('Single invoice preview error:', err);
             setError('Error opening preview: ' + err.message);
