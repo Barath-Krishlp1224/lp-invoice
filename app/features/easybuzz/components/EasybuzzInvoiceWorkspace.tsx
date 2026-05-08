@@ -224,8 +224,11 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
 
         const rowData = preview.data[rowIndex];
         const merchantKey = getRowMerchantKey(rowData);
+        const merchantSequence = preview.data
+            .slice(0, rowIndex + 1)
+            .filter((row) => getRowMerchantKey(row) === merchantKey).length;
 
-        return buildInvoiceNumber(merchantKey);
+        return `${buildInvoiceNumber(merchantKey)}${String(merchantSequence).padStart(2, '0')}`;
     };
 
 
@@ -701,14 +704,14 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                     <div className="grid grid-cols-1 gap-4">
                                         <div>
                                             <p className="mb-2 text-xs text-gray-600">
-                                                Invoice numbers are auto-generated as a 2-letter merchant prefix, today&apos;s date in `ddmmyy` format, and then the merchant code.
+                                                Invoice numbers are auto-generated as a 2-letter merchant prefix, today&apos;s date in `ddmmyy` format, the merchant code, and then a running order like `01`, `02`, `03`.
                                             </p>
                                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                                                 {getVisibleMerchantConfigs().map((config) => (
                                                     <div key={config.key} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
                                                         <div className="text-xs font-medium text-gray-700">{config.companyName}</div>
                                                         <div className="mt-1 text-sm font-semibold text-gray-900">
-                                                            {buildInvoiceNumber(config.key)}
+                                                            {`${buildInvoiceNumber(config.key)}01`}
                                                         </div>
                                                         <div className="mt-1 text-[11px] text-gray-500">
                                                             Merchant Code: {config.invoiceCode || 'Not configured'}

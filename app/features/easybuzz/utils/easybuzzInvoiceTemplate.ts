@@ -17,14 +17,14 @@ const hexToRgba = (hex, alpha) => {
 
 const pad2 = (value) => String(value).padStart(2, '0');
 
-const formatDateTimeParts = (year, month, day, hours, minutes) => {
+const formatDateTimeParts = (year, month, day, hours, minutes, seconds) => {
     const datePart = `${pad2(day)}/${pad2(month)}/${year}`;
 
     if (hours === undefined || minutes === undefined) {
         return datePart;
     }
 
-    return `${datePart} ${pad2(hours)}:${pad2(minutes)}`;
+    return `${datePart} ${pad2(hours)}:${pad2(minutes)}:${pad2(seconds ?? 0)}`;
 };
 
 const formatExcelSerialDate = (value) => {
@@ -40,7 +40,8 @@ const formatExcelSerialDate = (value) => {
         date.getUTCMonth() + 1,
         date.getUTCDate(),
         date.getUTCHours(),
-        date.getUTCMinutes()
+        date.getUTCMinutes(),
+        date.getUTCSeconds()
     );
 };
 
@@ -54,7 +55,8 @@ const formatDateString = (value) => {
     if (isoLikeMatch) {
         let hours = isoLikeMatch[4];
         const minutes = isoLikeMatch[5];
-        const meridiem = isoLikeMatch[6]?.toUpperCase();
+        const seconds = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2})(?::(\d{1,2}))(?::(\d{1,2}))?(?:\.\d+)?)?(?:\s*(AM|PM))?(?:Z|[+-]\d{2}:?\d{2})?$/i)?.[6];
+        const meridiem = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2})(?::(\d{1,2}))(?::(\d{1,2}))?(?:\.\d+)?)?(?:\s*(AM|PM))?(?:Z|[+-]\d{2}:?\d{2})?$/i)?.[7]?.toUpperCase();
 
         if (hours !== undefined && meridiem) {
             let normalizedHours = Number(hours);
@@ -68,12 +70,13 @@ const formatDateString = (value) => {
             Number(isoLikeMatch[2]),
             Number(isoLikeMatch[3]),
             hours !== undefined ? Number(hours) : undefined,
-            minutes !== undefined ? Number(minutes) : undefined
+            minutes !== undefined ? Number(minutes) : undefined,
+            seconds !== undefined ? Number(seconds) : undefined
         );
     }
 
     const slashDateMatch = trimmed.match(
-        /^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})(?:[ ,T]+(\d{1,2})(?::(\d{1,2}))(?::\d{1,2})?\s*(AM|PM)?)?$/i
+        /^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})(?:[ ,T]+(\d{1,2})(?::(\d{1,2}))(?::(\d{1,2}))?\s*(AM|PM)?)?$/i
     );
 
     if (slashDateMatch) {
@@ -86,7 +89,8 @@ const formatDateString = (value) => {
         const month = isMonthFirst ? first : second;
         let hours = slashDateMatch[4];
         const minutes = slashDateMatch[5];
-        const meridiem = slashDateMatch[6]?.toUpperCase();
+        const seconds = slashDateMatch[6];
+        const meridiem = slashDateMatch[7]?.toUpperCase();
 
         if (hours !== undefined && meridiem) {
             let normalizedHours = Number(hours);
@@ -100,7 +104,8 @@ const formatDateString = (value) => {
             month,
             day,
             hours !== undefined ? Number(hours) : undefined,
-            minutes !== undefined ? Number(minutes) : undefined
+            minutes !== undefined ? Number(minutes) : undefined,
+            seconds !== undefined ? Number(seconds) : undefined
         );
     }
 
@@ -111,7 +116,8 @@ const formatDateString = (value) => {
             parsedDate.getMonth() + 1,
             parsedDate.getDate(),
             parsedDate.getHours(),
-            parsedDate.getMinutes()
+            parsedDate.getMinutes(),
+            parsedDate.getSeconds()
         );
     }
 
@@ -162,7 +168,8 @@ export const formatCellValue = (value, header) => {
             value.getMonth() + 1,
             value.getDate(),
             value.getHours(),
-            value.getMinutes()
+            value.getMinutes(),
+            value.getSeconds()
         );
     }
 
