@@ -7,7 +7,7 @@ const MERCHANT_CONFIGS = {
         sparkleap: {
             key: 'sparkleap',
             displayName: 'Sparkleap',
-            companyName: 'SPARKLEAP TECH SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'SPARKLEAP TECH SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '',
             address: 'NO 195, VINAYAKAR KOVIL, STREET, VANUR TK, Eraiyur,<br/>Tindivanam, Villupuram- 604304 IN<br/>GST: 33ABOCS4605D1ZI',
             receiptEntityName: 'SPKL',
@@ -20,7 +20,7 @@ const MERCHANT_CONFIGS = {
         apextech: {
             key: 'apextech',
             displayName: 'APEXTECH',
-            companyName: 'APEXTECH SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'APEXTECH SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '00',
             address: 'NO 32, NEDU STREET, VISWANATHAPURAM, NELLIKKUPPAM, PANRUTI, CUDDALORE - 607105<br/>GST: 33ABACA7708F1Z0',
             receiptEntityName: 'APLP',
@@ -31,7 +31,7 @@ const MERCHANT_CONFIGS = {
         bytes_napse: {
             key: 'bytes_napse',
             displayName: 'BYTESYNAPSE',
-            companyName: 'BYTESYNAPSE SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'BYTESYNAPSE SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '45',
             address: 'NO 27, 2ND CROSS, NORTH STREET, THENGAITHITTU, PONDICHERRY - 607105<br/>GST: 34AANCB0540Q1ZF',
             receiptEntityName: 'BNLP',
@@ -48,7 +48,7 @@ const MERCHANT_CONFIGS = {
         bytes_sparkz: {
             key: 'bytes_sparkz',
             displayName: 'BYTESPARKZ',
-            companyName: 'BYTESPARKZ SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'BYTESPARKZ SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '48',
             address: 'NO 32, NEDU STREET, VISWANATHAPURAM, NELLIKKUPPAM, PANRUTI, CUDDALORE - 607105<br/>GST: 33AANCB1761F1ZV',
             receiptEntityName: 'BSLP',
@@ -59,7 +59,7 @@ const MERCHANT_CONFIGS = {
         byte_bliss: {
             key: 'byte_bliss',
             displayName: 'BYTEBLISS',
-            companyName: 'BYTEBLISS SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'BYTEBLISS SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '78',
             address: 'NO 15, 2 CRS, POONGAVANAM GARDEN, MANAVELY, ARIYANKUPPAM, PONDICHERRY - 605007<br/>GST: 34AAMCB6861D1ZN',
             receiptEntityName: 'BBLP',
@@ -70,7 +70,7 @@ const MERCHANT_CONFIGS = {
         byteevolve: {
             key: 'byteevolve',
             displayName: 'BYTEEVOLVE',
-            companyName: 'BYTEEVOLVE SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'BYTEEVOLVE SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '88',
             address: 'SF.NO.250/9, NO 195A, VINAYAGAR KOIL STREET, ERAIYUR, TINDIVANAM, VILLUPURAM - 604304, TAMIL NADU<br/>GST: 33AANCBI768N1Z7',
             receiptEntityName: 'BELP',
@@ -81,7 +81,7 @@ const MERCHANT_CONFIGS = {
         cipher_byte: {
             key: 'cipher_byte',
             displayName: 'CIPHER BYTE',
-            companyName: 'CIPHER BYTE SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'CIPHER BYTE SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '60',
             address: 'NO 4, NATTAR STREET, SECOND CROSS, MOUROUNGAPAKKAM, PONDICHERRY - 607105<br/>GST: 34AAMCC1682K1ZE',
             receiptEntityName: 'CBLP',
@@ -97,7 +97,7 @@ const MERCHANT_CONFIGS = {
         code_horizon: {
             key: 'code_horizon',
             displayName: 'CODEHORIZON',
-            companyName: 'CODEHORIZON SOFTWARE SOLUTIONS PVT LTD',
+            companyName: 'CODEHORIZON SOFTWARE SOLUTION PVT LTD',
             invoiceCode: '10',
             address: 'NO 424, MAIN ROAD NPM, NELLIKKUPPAM, PANRUTI, CUDDALORE, TAMIL NADU - 607105<br/>GST: 33AAMCC3726A1Z4',
             receiptEntityName: 'CHLP',
@@ -113,7 +113,7 @@ const MERCHANT_CONFIGS = {
         logic_nook: {
             key: 'logic_nook',
             displayName: 'LOGICNOOK',
-            companyName: 'LOGICNOOK SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'LOGICNOOK SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '42',
             address: 'NO 29, GOPU NAGAR, PADIRIKUPPAM, CUDDALORE - 607401<br/>GST: 33AAGCL0103N1ZT',
             receiptEntityName: 'LNLP',
@@ -128,7 +128,7 @@ const MERCHANT_CONFIGS = {
         novalogic: {
             key: 'novalogic',
             displayName: 'NOVALOGIC',
-            companyName: 'NOVALOGIC SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'NOVALOGIC SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '96',
             address: 'NO 15, 2 CRS, POONGAVANAM GARDEN, MANAVELY, ARIYANKUPPAM, PONDICHERRY - 605007<br/>GST: 34AAKCN1154D1ZT',
             receiptEntityName: 'NLLP',
@@ -139,7 +139,7 @@ const MERCHANT_CONFIGS = {
         orionbyte: {
             key: 'orionbyte',
             displayName: 'ORIONBYTE',
-            companyName: 'ORIONBYTE SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'ORIONBYTE SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '04',
             address: 'NO 424, MAIN ROAD, NELLIKKUPPAM, PANRUTI, CUDDALORE - 607105<br/>GST: 33AAECO4187B1ZP',
             receiptEntityName: 'ONLP',
@@ -150,7 +150,7 @@ const MERCHANT_CONFIGS = {
         shadaus: {
             key: 'shadaus',
             displayName: 'SHADAUS',
-            companyName: 'SHADAUS SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'SHADAUS SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '70',
             address: 'NO 424, MAIN ROAD, NELLIKKUPPAM, PANRUTI, CUDDALORE - 607105, TAMIL NADU<br/>GST: 33ABOCS7237H1Z0',
             receiptEntityName: 'SDUS',
@@ -161,7 +161,7 @@ const MERCHANT_CONFIGS = {
         techterra: {
             key: 'techterra',
             displayName: 'TECHTERRA',
-            companyName: 'TECHTERRA SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'TECHTERRA SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '38',
             address: 'NO 15, MANDAPA STREET, TYR-1 ANAIKUDI, THIRUVAIYARU, THANJAVUR - 613204<br/>GST: 33AALCT6101F1ZN',
             receiptEntityName: 'TTLP',
@@ -177,7 +177,7 @@ const MERCHANT_CONFIGS = {
         voltiq: {
             key: 'voltiq',
             displayName: 'VoltIQ',
-            companyName: 'VOLT IQ SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'VOLT IQ SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '63',
             address: 'NO 15, MANDAPA STREET, THIRUVAIYARU, ANAIKUDY, THANJAVUR - 607105<br/>GST: 33AAKCV1375L1ZZ',
             receiptEntityName: 'VIQLP',
@@ -192,7 +192,7 @@ const MERCHANT_CONFIGS = {
         zoving_business: {
             key: 'zoving_business',
             displayName: 'ZOVING BUSINESS',
-            companyName: 'ZOVING BUSINESS SOFTWARE SOLUTIONS PRIVATE LIMITED',
+            companyName: 'ZOVING BUSINESS SOFTWARE SOLUTION PRIVATE LIMITED',
             invoiceCode: '25',
             address: '32, NEDU STREET, VISWANATHAPURAM, PANRUTI, NELLIKKUPPAM, CUDDALORE - 607105<br/>GST: 33AACCZ5103E1ZS',
             receiptEntityName: 'ZVLP',
