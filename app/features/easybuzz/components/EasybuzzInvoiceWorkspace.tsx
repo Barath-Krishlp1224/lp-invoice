@@ -28,6 +28,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
     const [isMerchantFilterOpen, setIsMerchantFilterOpen] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     const [tableKey, setTableKey] = useState(0);
+    const [startingSequences, setStartingSequences] = useState({});
+    const [tempSequences, setTempSequences] = useState({});
 
     const {
         loading,
@@ -144,6 +146,59 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         };
     }, []);
 
+    useEffect(() => {
+        const saved = localStorage.getItem('lp_invoice_starting_sequences');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setStartingSequences(parsed);
+                setTempSequences(parsed);
+            } catch (e) {
+                console.error('Failed to parse starting sequences', e);
+            }
+        }
+    }, []);
+
+    const handleSequenceChange = (merchantKey, value) => {
+        // Only allow digits, no length restriction
+        const cleanValue = value.replace(/[^0-9]/g, '');
+        setTempSequences(prev => ({
+            ...prev,
+            [merchantKey]: cleanValue
+        }));
+    };
+
+    const saveSequence = (merchantKey) => {
+        const value = tempSequences[merchantKey];
+        if (!value || value === '') {
+            showToast('Please enter a valid sequence number', 'error');
+            return;
+        }
+
+        const newSequences = {
+            ...startingSequences,
+            [merchantKey]: parseInt(value, 10)
+        };
+        setStartingSequences(newSequences);
+        setTempSequences(prev => {
+            const next = { ...prev };
+            delete next[merchantKey];
+            return next;
+        });
+
+        // Always show success toast since memory state is updated
+        showToast('Invoice sequence updated successfully', 'success');
+        
+        if (typeof window !== 'undefined' && window.localStorage) {
+            try {
+                const data = JSON.stringify(newSequences);
+                window.localStorage.setItem('lp_invoice_starting_sequences', data);
+            } catch (e) {
+                console.warn('Silent localStorage failure:', e);
+            }
+        }
+    };
+
     const getFilenameFromRRN = (rowData) => {
         if (!rrnColumn || !rowData[rrnColumn]) {
             return `${rowData._rowIndex}`;
@@ -231,7 +286,10 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
             .slice(0, rowIndex + 1)
             .filter((row) => getRowMerchantKey(row) === merchantKey).length;
 
-        return `${buildInvoiceNumber(merchantKey)}${String(merchantSequence).padStart(2, '0')}`;
+        const baseSequence = startingSequences[merchantKey] || 1;
+        const finalSequence = baseSequence + (merchantSequence - 1);
+
+        return `${buildInvoiceNumber(merchantKey)}${String(finalSequence).padStart(2, '0')}`;
     };
 
 
@@ -661,17 +719,51 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                                 Invoice numbers are auto-generated as a 2-letter merchant prefix, today&apos;s date in `ddmmyy` format, the merchant code, and then a running order like `01`, `02`, `03`.
                                             </p>
                                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                                                {getVisibleMerchantConfigs().map((config) => (
-                                                    <div key={config.key} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
-                                                        <div className="text-xs font-medium text-gray-700">{config.companyName}</div>
-                                                        <div className="mt-1 text-sm font-semibold text-gray-900">
-                                                            {`${buildInvoiceNumber(config.key)}01`}
+                                                {getVisibleMerchantConfigs().map((config) => {
+                                                    const prefix = buildInvoiceNumber(config.key);
+                                                    const savedVal = String(startingSequences[config.key] ?? '01').padStart(2, '0');
+                                                    const tempVal = tempSequences[config.key] !== undefined 
+                                                        ? String(tempSequences[config.key]).padStart(2, '0') 
+                                                        : savedVal;
+                                                    const hasChanged = tempVal !== savedVal;
+
+                                                    return (
+                                                        <div key={config.key} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
+                                                            <div className="text-xs font-medium text-gray-700 truncate" title={config.companyName}>
+                                                                {config.companyName}
+                                                            </div>
+                                                            <div className="mt-2 flex items-center gap-2">
+                                                                <div className="flex items-center bg-white border border-gray-300 rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-green-500">
+                                                                    <span className="pl-3 py-1.5 text-xs font-semibold text-gray-500 bg-gray-100 border-r border-gray-200 select-none">
+                                                                        {prefix}
+                                                                    </span>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={tempSequences[config.key] ?? savedVal}
+                                                                        onChange={(e) => handleSequenceChange(config.key, e.target.value)}
+                                                                        className="w-16 px-2 py-1.5 text-sm font-bold text-gray-900 focus:outline-none"
+                                                                        placeholder="01"
+                                                                    />
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => saveSequence(config.key)}
+                                                                    disabled={!hasChanged}
+                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                                                        hasChanged 
+                                                                        ? 'bg-green-600 text-white shadow-sm hover:bg-green-700' 
+                                                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                                    }`}
+                                                                >
+                                                                    Save
+                                                                </button>
+                                                            </div>
+                                                            <div className="mt-2 flex items-center justify-between text-[10px] text-gray-500">
+                                                                <span>Merchant Code: {config.invoiceCode || 'N/A'}</span>
+                                                                {hasChanged && <span className="text-green-600 font-medium">Unsaved changes</span>}
+                                                            </div>
                                                         </div>
-                                                        <div className="mt-1 text-[11px] text-gray-500">
-                                                            Merchant Code: {config.invoiceCode || 'Not configured'}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     </div>
