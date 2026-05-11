@@ -6,6 +6,7 @@ import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, 
 import { APP_ASSETS } from '../../../constants/assets';
 import useInvoiceDataProcessing from '../../file-processing/hooks/useInvoiceDataProcessing';
 import { generateProfessionalInvoiceHTML, formatCellValue, detectRequiredColumns } from '../utils/finoInvoiceTemplate';
+import { createUniqueFilenameTracker, generatePdfBlobFromHtml, getUniquePdfBasename, triggerBlobDownload } from '../../file-processing/utils/pdfGeneration';
 
 export default function FinoInvoiceWorkspace() {
     const [file, setFile] = useState(null);
@@ -17,6 +18,8 @@ export default function FinoInvoiceWorkspace() {
     const [generatingZip, setGeneratingZip] = useState(false);
     const [isViewingInTabs, setIsViewingInTabs] = useState(false);
     const [zipProgress, setZipProgress] = useState(0);
+    const [activePdfRowIndex, setActivePdfRowIndex] = useState<number | null>(null);
+    const [activePdfFilename, setActivePdfFilename] = useState('');
     const [jetpackInvoiceStart, setJetpackInvoiceStart] = useState('');
     const [auxfordInvoiceStart, setAuxfordInvoiceStart] = useState('');
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -205,39 +208,8 @@ export default function FinoInvoiceWorkspace() {
         processFile(droppedFile);
     };
 
-    const downloadAsPDF = (htmlContent, filename = 'invoice') => {
-        // Use the browser's native print function for simple PDF generation (best for direct printing/saving)
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>${filename}</title>
-                    <style>
-                        /* Essential for A4 sizing on print */
-                        @media print {
-                            @page { size: A4; margin: 0; }
-                            body { margin: 0; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${htmlContent}
-                    <script>
-                        // Give browser time to render before printing
-                        setTimeout(() => {
-                            window.print();
-                            // Optional: close the tab after print dialog is shown/closed
-                            // window.close(); 
-                        }, 500);
-                    </script>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-        } else {
-            setError('Could not open print dialog. Please disable pop-up blockers.');
-        }
+    const generatePdfBlob = async (htmlContent) => {
+        return generatePdfBlobFromHtml(htmlContent);
     };
 
     const previewInvoice = (htmlContent, windowName = '_blank') => {
@@ -339,14 +311,7 @@ export default function FinoInvoiceWorkspace() {
         }
     };
 
-    // Helper to create an element for html2pdf to process
-    const createInvoiceElement = (htmlContent) => {
-        const tempDiv = document.createElement('div');
-        // Set a width close to A4 size to help html2pdf with scaling
-        tempDiv.style.width = '208mm'; 
-        tempDiv.innerHTML = htmlContent;
-        return tempDiv;
-    };
+    const isPdfActionInProgress = generatingZip || activePdfRowIndex !== null;
 
     const downloadAllAsZip = async () => {
         if (!preview || !preview.data.length) return;
@@ -366,20 +331,11 @@ export default function FinoInvoiceWorkspace() {
         setZipProgress(0);
         setError(null);
 
-        // Create a temporary, hidden container to render the PDF content for html2pdf
-        const tempContainer = document.createElement('div');
-        tempContainer.style.position = 'fixed';
-        tempContainer.style.top = '0';
-        tempContainer.style.left = '0';
-        tempContainer.style.zIndex = '-1000';
-        tempContainer.style.opacity = '0';
-        tempContainer.style.pointerEvents = 'none';
-        tempContainer.style.width = '208mm';
-        document.body.appendChild(tempContainer);
-
         try {
             const zip = new window.JSZip();
             const totalRows = preview.data.length;
+            const filenameTracker = createUniqueFilenameTracker();
+            let generatedCount = 0;
 
             for (let i = 0; i < totalRows; i++) {
                 const rowData = preview.data[i];
@@ -396,38 +352,10 @@ export default function FinoInvoiceWorkspace() {
                     amountColumn,
                     transactionDateColumn // Pass the transaction date column
                 );
-                const filename = getFilenameFromRRN(rowData);
-
-                const element = createInvoiceElement(htmlContent);
-                tempContainer.appendChild(element);
-
-                // Generate PDF Blob using html2pdf
-                const pdfBlob = await window.html2pdf()
-                    .from(element)
-                    .set({
-                        margin: [1, 5, 1, 5],
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: {
-                            scale: 2,
-                            logging: false,
-                            allowTaint: true,
-                            useCORS: true
-                        },
-                        jsPDF: {
-                            unit: 'mm',
-                            format: 'a4',
-                            orientation: 'portrait',
-                            compress: true
-                        },
-                        pagebreak: { mode: 'none' } // Important to prevent page breaks in invoice HTML
-                    })
-                    .output('blob');
-
-                // Add the PDF to the ZIP file
+                const filename = getUniquePdfBasename(getFilenameFromRRN(rowData), filenameTracker);
+                const pdfBlob = await generatePdfBlob(htmlContent);
                 zip.file(`${filename}.pdf`, pdfBlob);
-                
-                // Clean up the temporary element
-                tempContainer.removeChild(element);
+                generatedCount += 1;
                 
                 // Update progress
                 setZipProgress(Math.round(((i + 1) / totalRows) * 100));
@@ -446,28 +374,15 @@ export default function FinoInvoiceWorkspace() {
             });
 
             // Trigger the download
-            const url = URL.createObjectURL(zipBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `Invoices_PDF_${new Date().toISOString().split('T')[0]}.zip`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url); // Clean up the URL object
-
-            showToast(`Successfully created ZIP file with ${totalRows} PDF invoices!`, 'success');
+            triggerBlobDownload(zipBlob, `Invoices_PDF_${new Date().toISOString().split('T')[0]}.zip`);
+            showToast(`Successfully created ZIP file with ${generatedCount} PDF invoices!`, 'success');
         } catch (err) {
             console.error('ZIP/PDF generation error:', err);
             setError('Error creating ZIP file: ' + err.message);
         } finally {
-            // Ensure the temp container is removed even if an error occurs
-            if (document.body.contains(tempContainer)) {
-                document.body.removeChild(tempContainer);
-            }
+            setGeneratingZip(false);
+            setZipProgress(0);
         }
-
-        setGeneratingZip(false);
-        setZipProgress(0);
     };
 
     const generateSinglePDF = async (index) => {
@@ -485,6 +400,10 @@ export default function FinoInvoiceWorkspace() {
             const rowData = preview.data[startIndex + index];
             const actualRowIndex = startIndex + index;
             const invoiceNumber = calculateInvoiceNumber(actualRowIndex);
+            const filename = getFilenameFromRRN(rowData);
+
+            setActivePdfRowIndex(actualRowIndex);
+            setActivePdfFilename(`${filename}.pdf`);
 
             const htmlContent = generateProfessionalInvoiceHTML(
                 rowData,
@@ -497,11 +416,14 @@ export default function FinoInvoiceWorkspace() {
                 transactionDateColumn // Pass the transaction date column
             );
 
-            // Use the simpler print method for single PDF download
-            downloadAsPDF(htmlContent, getFilenameFromRRN(rowData));
+            const pdfBlob = await generatePdfBlob(htmlContent);
+            triggerBlobDownload(pdfBlob, `${filename}.pdf`);
         } catch (err) {
             console.error('Single PDF generation error:', err);
             setError('Error generating PDF: ' + err.message);
+        } finally {
+            setActivePdfRowIndex(null);
+            setActivePdfFilename('');
         }
     };
 
@@ -831,20 +753,22 @@ export default function FinoInvoiceWorkspace() {
 
                                 {isReadyToGenerate && (
                                     <div className="mt-4 flex justify-center gap-3">
-                                        <button onClick={viewAllInTabs} disabled={isViewingInTabs || generatingZip} className="inline-flex items-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <button onClick={viewAllInTabs} disabled={isViewingInTabs || isPdfActionInProgress} className="inline-flex items-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                             <Eye className="w-4 h-4 mr-2" />
                                             {isViewingInTabs ? `Opening ${preview.data.length} Tabs...` : 'View All in Tabs'}
                                         </button>
 
-                                        <button onClick={downloadAllAsZip} disabled={generatingZip || isViewingInTabs} className="inline-flex items-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                            <Download className="w-4 h-4 mr-2" />
+                                        <button onClick={downloadAllAsZip} disabled={isPdfActionInProgress || isViewingInTabs} className="inline-flex items-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                             {generatingZip ? (
                                                 <>
                                                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
                                                     {`Creating ZIP... ${zipProgress}%`}
                                                 </>
                                             ) : (
-                                                `Download All (${preview.data.length})`
+                                                <>
+                                                    <Download className="w-4 h-4 mr-2" />
+                                                    {`Download All (${preview.data.length})`}
+                                                </>
                                             )}
                                         </button>
                                     </div>
@@ -940,14 +864,28 @@ export default function FinoInvoiceWorkspace() {
                                                                     <div className="flex items-center justify-center gap-2">
                                                                         <button
                                                                             onClick={() => previewSingleInvoice(index)}
-                                                                            className="inline-flex items-center justify-center p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                                            disabled={isPdfActionInProgress}
+                                                                            className="inline-flex items-center justify-center rounded p-1.5 text-blue-600 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                                                                             aria-label={`Preview invoice ${invoiceNum !== null ? invoiceNum : actualRowIndex + 1}`}
                                                                             title="Preview invoice"
                                                                         >
                                                                             <Eye className="w-4 h-4" />
                                                                         </button>
-                                                                        <button onClick={() => generateSinglePDF(index)} className="inline-flex items-center px-3 py-1 bg-green-600 text-white hover:bg-green-700 rounded text-xs font-medium transition-colors">
-                                                                            <Download className="w-3 h-3 mr-1" />Generate
+                                                                        <button
+                                                                            onClick={() => generateSinglePDF(index)}
+                                                                            disabled={isPdfActionInProgress}
+                                                                            className="inline-flex items-center rounded bg-green-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                        >
+                                                                            {activePdfRowIndex === actualRowIndex ? (
+                                                                                <>
+                                                                                    <div className="mr-1 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent"></div>
+                                                                                    Generating...
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <Download className="w-3 h-3 mr-1" />Generate
+                                                                                </>
+                                                                            )}
                                                                         </button>
                                                                     </div>
                                                                 ) : (
@@ -995,17 +933,21 @@ export default function FinoInvoiceWorkspace() {
                             </div>
                         )}
 
-                        {generatingZip && (
+                        {(generatingZip || activePdfRowIndex !== null) && (
                             <div className="border-t border-gray-200 bg-gray-50 p-5 md:p-7">
                                 <div className="text-center mb-3">
-                                    <h4 className="text-sm font-semibold text-gray-900">Creating PDF ZIP File</h4>
-                                    <p className="text-xs text-gray-600 mt-1">Please wait...</p>
+                                    <h4 className="text-sm font-semibold text-gray-900">
+                                        {generatingZip ? 'Creating PDF ZIP File' : 'Generating PDF'}
+                                    </h4>
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        {generatingZip ? 'Please wait while all invoices are rendered.' : `Preparing ${activePdfFilename || 'invoice.pdf'} for download.`}
+                                    </p>
                                 </div>
                                 <div className="flex items-center justify-center gap-3">
                                     <div className="flex-1 max-w-md bg-gray-200 rounded-full h-2">
-                                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${zipProgress}%` }}></div>
+                                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${generatingZip ? zipProgress : 100}%` }}></div>
                                     </div>
-                                    <div className="text-sm font-semibold text-gray-900 min-w-[3rem]">{zipProgress}%</div>
+                                    <div className="text-sm font-semibold text-gray-900 min-w-[3rem]">{generatingZip ? `${zipProgress}%` : '...'}</div>
                                 </div>
                             </div>
                         )}

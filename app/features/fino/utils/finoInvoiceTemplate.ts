@@ -160,12 +160,14 @@ const generateAuxfordInvoiceHTML = (
         }
         
         .invoice-wrapper {
+            width: 210mm;
             max-width: 210mm;
             margin: 0 auto;
             background: white;
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.1);
             border-radius: 12px;
             overflow: hidden;
+            min-height: 297mm;
         }
         
         .invoice-header {
@@ -461,6 +463,7 @@ const generateAuxfordInvoiceHTML = (
                 box-shadow: none;
                 width: 100%;
                 border-radius: 0;
+                min-height: 297mm;
             }
             
             .invoice-header {
@@ -544,7 +547,7 @@ const generateAuxfordInvoiceHTML = (
 
             @page {
                 size: A4;
-                margin: 5mm;
+                margin: 0;
             }
             
             .transaction-table {
@@ -719,12 +722,14 @@ const generateJetpackInvoiceHTML = (
         }
         
         .invoice-container {
+            width: 210mm;
             max-width: 210mm;
             margin: 0 auto;
             background: white;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.1);
             border-radius: 12px;
             overflow: hidden;
+            min-height: 297mm;
         }
         
         .invoice-header {
@@ -992,6 +997,7 @@ const generateJetpackInvoiceHTML = (
                 box-shadow: none;
                 border-radius: 0;
                 width: 100%;
+                min-height: 297mm;
             }
 
             .company-logo {
@@ -1100,7 +1106,7 @@ const generateJetpackInvoiceHTML = (
             
             @page {
                 size: A4;
-                margin: 5mm;
+                margin: 0;
             }
         }
         

@@ -258,18 +258,20 @@ export const generateProfessionalInvoiceHTML = (
             width: 100%;
             max-width: 210mm;
             margin: 0 auto;
-            padding: 8mm 0;
+            min-height: 297mm;
+            padding: 0;
         }
 
         .invoice {
             background: #ffffff;
             padding: 9mm;
             width: 100%;
-            min-height: auto;
+            min-height: 297mm;
             position: relative;
             box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
             border: 1px solid #d9e2ec;
             border-radius: 10px;
+            overflow: hidden;
         }
 
         .accent-bar {
@@ -566,9 +568,8 @@ export const generateProfessionalInvoiceHTML = (
             }
 
             .invoice {
-                padding: 8mm;
+                padding: 9mm;
                 min-height: 296mm;
-                max-height: 296mm;
                 box-shadow: none;
                 border-radius: 0;
                 border: none;

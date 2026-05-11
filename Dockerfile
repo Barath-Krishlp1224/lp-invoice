@@ -1,48 +1,28 @@
-# Step 1: Build the Next.js app
-FROM node:20-alpine AS builder
-
-# Install Git (required for npm install if dependencies use Git)
-RUN apk add --no-cache git
-
+FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
+COPY package.json package-lock.json ./
+RUN npm ci
 
-#Add cache busting for npm install
-ARG CACHE_BUST
-RUN echo "Cache bust: $CACHE_BUST"
-
-#Clean cache and install all dependencies
-RUN npm cache clean --force
-RUN npm install --legacy-peer-deps --force
-
-#Verify api-types is installed correctly
-RUN npm list api-types
-RUN ls -la node_modules/api-types/
-
-RUN find node_modules/api-types -name "*.d.ts" -o -name "*.ts" -o -name "*.js" | head -20
-# Copy the rest of the application code
-COPY . .
-
-# Build the Next.js application
-RUN npm run build
-
-# Step 2: Prepare the production image
-FROM node:20-alpine
-
+FROM node:20-alpine AS builder
+WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+RUN npm run build
+
+FROM node:20-alpine AS runner
 WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
 
-# Copy the built app from the builder stage
-COPY --from=builder /app ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Install only production dependencies
-RUN npm install --only=production --no-cache
+EXPOSE 3000
 
-# Expose the port the app will run on
-EXPOSE 3002
-
-# Start the Next.js app
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
