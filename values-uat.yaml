@@ -48,6 +48,6 @@ livenessProbe:
 apisix:
   classname: apisix-demo
   hosts:
-    - lp-uat.lemonpay.in # here we need add IP for testing purpose only 
+    - invoice-uat.lemonpay.in # here we need add IP for testing purpose only 
   paths:
     - "/*"
