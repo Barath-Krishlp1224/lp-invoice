@@ -92,6 +92,9 @@ export default function MerchantSelectionPage() {
           .hero-panel {
             border-radius: 22px;
           }
+          .merchant-card {
+            width: 100% !important;
+          }
         }
       `}</style>
 
@@ -171,7 +174,7 @@ export default function MerchantSelectionPage() {
             <div className="divider-line" style={{ marginTop: "20px" }} />
           </div>
 
-          <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", justifyContent: "center", alignItems: "stretch" }}>
             <button
               onClick={() => handleNavigation("/fino")}
               className="merchant-card card-fino"

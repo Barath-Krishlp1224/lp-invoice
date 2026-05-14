@@ -6,10 +6,150 @@ import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, 
 import { APP_ASSETS } from '../../../constants/assets';
 import useInvoiceDataProcessing from '../../file-processing/hooks/useInvoiceDataProcessing';
 import { generateProfessionalInvoiceHTML, formatCellValue, detectRequiredColumns } from '../utils/finoInvoiceTemplate';
-import { createUniqueFilenameTracker, generateMergedPdfBlobFromHtmlList, generatePdfBlobFromHtml, getUniquePdfBasename, openPdfBlobPreview, sanitizePdfPathSegment, triggerBlobDownload } from '../../file-processing/utils/pdfGeneration';
+import { MAX_OPTIMIZED_OUTPUT_BYTES, createUniqueFilenameTracker, generateMergedPdfBlobFromHtmlList, generatePdfBlobFromHtml, getUniquePdfBasename, openPdfBlobPreview, sanitizePdfPathSegment, triggerBlobDownload } from '../../file-processing/utils/pdfGeneration';
 import PrintSelectionModal from '../../file-processing/components/PrintSelectionModal';
 
 export default function FinoInvoiceWorkspace() {
+    const getZipArtifactBudget = (artifactCount) => {
+        const reservedZipOverhead = 512 * 1024;
+        const usableBytes = Math.max(256 * 1024, MAX_OPTIMIZED_OUTPUT_BYTES - reservedZipOverhead);
+        return Math.max(140 * 1024, Math.floor(usableBytes / Math.max(artifactCount, 1)));
+    };
+    const ZIP_PART_RESERVED_BYTES = 256 * 1024;
+    const ZIP_PART_PAYLOAD_LIMIT = MAX_OPTIMIZED_OUTPUT_BYTES - ZIP_PART_RESERVED_BYTES;
+    const ZIP_GENERATION_OPTIONS = {
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 9 },
+    };
+    const estimateZipEntryBytes = (entry) => (entry.blob?.size || 0) + 4096 + (entry.path?.length || 0) * 2;
+    const splitEntryBatch = (entries) => {
+        const totalBytes = entries.reduce((sum, entry) => sum + estimateZipEntryBytes(entry), 0);
+        const targetBytes = totalBytes / 2;
+        const firstBatch = [];
+        let firstBatchBytes = 0;
+
+        for (let index = 0; index < entries.length; index += 1) {
+            const entry = entries[index];
+            if (firstBatch.length === 0 || firstBatchBytes < targetBytes) {
+                firstBatch.push(entry);
+                firstBatchBytes += estimateZipEntryBytes(entry);
+            } else {
+                break;
+            }
+        }
+
+        if (firstBatch.length === entries.length) {
+            firstBatch.pop();
+        }
+
+        return [firstBatch, entries.slice(firstBatch.length)];
+    };
+    const partitionZipEntries = (entries) => {
+        const parts = [];
+        let currentEntries = [];
+        let currentBytes = 0;
+
+        entries.forEach((entry) => {
+            const entryBytes = estimateZipEntryBytes(entry);
+
+            if (currentEntries.length > 0 && currentBytes + entryBytes > ZIP_PART_PAYLOAD_LIMIT) {
+                parts.push(currentEntries);
+                currentEntries = [];
+                currentBytes = 0;
+            }
+
+            currentEntries.push(entry);
+            currentBytes += entryBytes;
+        });
+
+        if (currentEntries.length > 0) {
+            parts.push(currentEntries);
+        }
+
+        return parts;
+    };
+    const buildZipBlobFromEntries = async (entries) => {
+        const zip = new window.JSZip();
+        entries.forEach((entry) => {
+            zip.file(entry.path, entry.blob);
+        });
+        return zip.generateAsync(ZIP_GENERATION_OPTIONS);
+    };
+    const buildSimpleZipBlob = async (files) => {
+        const zip = new window.JSZip();
+        files.forEach((file) => {
+            zip.file(file.filename, file.blob);
+        });
+        return zip.generateAsync(ZIP_GENERATION_OPTIONS);
+    };
+    const generateZipPartBlobs = async (entries) => {
+        const pendingBatches = partitionZipEntries(entries);
+        const finalBlobs = [];
+
+        while (pendingBatches.length > 0) {
+            const batch = pendingBatches.shift();
+
+            if (!batch || batch.length === 0) {
+                continue;
+            }
+
+            const zipBlob = await buildZipBlobFromEntries(batch);
+            if (zipBlob.size <= MAX_OPTIMIZED_OUTPUT_BYTES) {
+                finalBlobs.push(zipBlob);
+                continue;
+            }
+
+            if (batch.length === 1) {
+                throw new Error(
+                    `ZIP part containing ${batch[0].path} is ${(zipBlob.size / (1024 * 1024)).toFixed(2)} MB, which exceeds the 5 MB limit.`
+                );
+            }
+
+            const [firstHalf, secondHalf] = splitEntryBatch(batch);
+            pendingBatches.unshift(secondHalf, firstHalf);
+        }
+
+        return finalBlobs;
+    };
+    const generateMergedPdfEntries = async (documents, {
+        baseFilename,
+        label,
+    }) => {
+        const results = [];
+
+        const processChunk = async (chunkDocuments) => {
+            try {
+                const mergedPdfBlob = await generateMergedPdfBlobFromHtmlList(
+                    chunkDocuments.map((entry) => entry.htmlContent),
+                    {
+                        maxBytes: MAX_OPTIMIZED_OUTPUT_BYTES,
+                        label,
+                    }
+                );
+                results.push(mergedPdfBlob);
+            } catch (err) {
+                if (err?.code === 'PDF_SIZE_LIMIT_EXCEEDED' && chunkDocuments.length > 1) {
+                    const midPoint = Math.ceil(chunkDocuments.length / 2);
+                    await processChunk(chunkDocuments.slice(0, midPoint));
+                    await processChunk(chunkDocuments.slice(midPoint));
+                    return;
+                }
+
+                throw err;
+            }
+        };
+
+        await processChunk(documents);
+
+        return results.map((blob, index) => ({
+            blob,
+            filename: results.length === 1
+                ? `${baseFilename}.pdf`
+                : `${baseFilename}_Part_${index + 1}.pdf`,
+        }));
+    };
+
     const [file, setFile] = useState(null);
     const fileInputRef = useRef(null);
     const [showDuplicates, setShowDuplicates] = useState(false);
@@ -17,6 +157,7 @@ export default function FinoInvoiceWorkspace() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [generatingZip, setGeneratingZip] = useState(false);
+    const [isDownloadingMerged, setIsDownloadingMerged] = useState(false);
     const [isViewingInTabs, setIsViewingInTabs] = useState(false);
     const [zipProgress, setZipProgress] = useState(0);
     const [activePdfRowIndex, setActivePdfRowIndex] = useState<number | null>(null);
@@ -324,9 +465,60 @@ export default function FinoInvoiceWorkspace() {
         }
     };
 
-    const isPdfActionInProgress = generatingZip || isPrinting || activePdfRowIndex !== null;
+    const isPdfActionInProgress = generatingZip || isDownloadingMerged || isPrinting || activePdfRowIndex !== null;
 
-    const downloadAllAsZip = async () => {
+    const downloadMergedPdfOnly = async () => {
+        if (!preview || !preview.data.length) return;
+
+        if (!rrnColumn || !upiColumn || !amountColumn) {
+            setError('Please select all required columns.');
+            return;
+        }
+
+        if (typeof window.html2pdf !== 'function') {
+            setError('PDF library not fully loaded. Please wait a moment and try again.');
+            return;
+        }
+
+        setIsDownloadingMerged(true);
+        setActivePdfFilename('Merged_All.pdf');
+        setError(null);
+
+        try {
+            const invoiceDocuments = preview.data.map((rowData, index) => getInvoiceDocument(rowData, index));
+            const mergedAllEntries = await generateMergedPdfEntries(invoiceDocuments, {
+                baseFilename: 'Merged_All',
+                label: 'Merged all PDF',
+            });
+            const dateSuffix = new Date().toISOString().split('T')[0];
+
+            if (mergedAllEntries.length === 1) {
+                triggerBlobDownload(mergedAllEntries[0].blob, mergedAllEntries[0].filename);
+            } else {
+                if (!window.JSZip) {
+                    throw new Error('ZIP library not fully loaded. Please wait a moment and try again.');
+                }
+
+                const mergedZipBlob = await buildSimpleZipBlob(mergedAllEntries);
+                triggerBlobDownload(mergedZipBlob, `Merged_PDF_${dateSuffix}.zip`);
+            }
+
+            showToast(
+                mergedAllEntries.length > 1
+                    ? `Downloaded one ZIP with ${mergedAllEntries.length} merged PDF parts for ${invoiceDocuments.length} invoices.`
+                    : `Downloaded merged PDF for ${invoiceDocuments.length} invoices.`,
+                'success'
+            );
+        } catch (err) {
+            console.error('Merged PDF download error:', err);
+            setError('Error creating merged PDF: ' + err.message);
+        } finally {
+            setIsDownloadingMerged(false);
+            setActivePdfFilename('');
+        }
+    };
+
+    const downloadSeparateFilesZip = async () => {
         if (!preview || !preview.data.length) return;
 
         if (!rrnColumn || !upiColumn || !amountColumn) {
@@ -345,11 +537,11 @@ export default function FinoInvoiceWorkspace() {
         setError(null);
 
         try {
-            const zip = new window.JSZip();
             const invoiceDocuments = preview.data.map((rowData, index) => getInvoiceDocument(rowData, index));
             const totalRows = invoiceDocuments.length;
             const merchantTrackers = new Map();
             const merchantGroups = new Map();
+            const zipEntries = [];
 
             invoiceDocuments.forEach((document) => {
                 const merchantKey = document.merchantLabel;
@@ -367,12 +559,19 @@ export default function FinoInvoiceWorkspace() {
                 });
             });
 
+            const zipArtifactBudget = getZipArtifactBudget(totalRows + 1);
+
             for (let i = 0; i < totalRows; i += 1) {
                 const invoiceDocument = invoiceDocuments[i];
-                const pdfBlob = await generatePdfBlob(invoiceDocument.htmlContent);
-                const merchantFolder = zip.folder(sanitizePdfPathSegment(invoiceDocument.merchantLabel, 'Merchant'));
-
-                merchantFolder.file(`${invoiceDocument.uniqueFilename}.pdf`, pdfBlob);
+                const pdfBlob = await generatePdfBlob(invoiceDocument.htmlContent, {
+                    maxBytes: zipArtifactBudget,
+                    label: `${invoiceDocument.uniqueFilename || invoiceDocument.filename}.pdf`,
+                });
+                const merchantFolderPath = sanitizePdfPathSegment(invoiceDocument.merchantLabel, 'Merchant');
+                zipEntries.push({
+                    path: `${merchantFolderPath}/${invoiceDocument.uniqueFilename}.pdf`,
+                    blob: pdfBlob,
+                });
                 setZipProgress(Math.round(((i + 1) / totalRows) * 80));
 
                 // Yield control to the browser to prevent UI freezing every few iterations
@@ -381,30 +580,55 @@ export default function FinoInvoiceWorkspace() {
                 }
             }
 
+            const mergedAllEntries = await generateMergedPdfEntries(invoiceDocuments, {
+                baseFilename: 'Merged_All',
+                label: 'Merged all PDF',
+            });
+            mergedAllEntries.forEach((entry) => {
+                zipEntries.push({
+                    path: entry.filename,
+                    blob: entry.blob,
+                });
+            });
+            setZipProgress(88);
+
             const merchantEntriesList = Array.from(merchantGroups.entries());
             for (let index = 0; index < merchantEntriesList.length; index += 1) {
                 const [merchantLabel, entries] = merchantEntriesList[index];
-                const merchantFolder = zip.folder(sanitizePdfPathSegment(merchantLabel, 'Merchant'));
-                const mergedPdfBlob = await generateMergedPdfBlobFromHtmlList(entries.map((entry) => entry.htmlContent));
+                const merchantFolderPath = sanitizePdfPathSegment(merchantLabel, 'Merchant');
+                const merchantMergedEntries = await generateMergedPdfEntries(entries, {
+                    baseFilename: 'Merged',
+                    label: `${merchantLabel} merged PDF`,
+                });
 
-                merchantFolder.file('Merged.pdf', mergedPdfBlob);
-                setZipProgress(80 + Math.round(((index + 1) / (merchantEntriesList.length + 1)) * 20));
+                merchantMergedEntries.forEach((entry) => {
+                    zipEntries.push({
+                        path: `${merchantFolderPath}/${entry.filename}`,
+                        blob: entry.blob,
+                    });
+                });
+
+                setZipProgress(88 + Math.round(((index + 1) / Math.max(merchantEntriesList.length, 1)) * 7));
             }
 
-            const mergedAllPdfBlob = await generateMergedPdfBlobFromHtmlList(invoiceDocuments.map((entry) => entry.htmlContent));
-            zip.file('Merged_All.pdf', mergedAllPdfBlob);
-            setZipProgress(100);
+            const zipPartBlobs = await generateZipPartBlobs(zipEntries);
+            const dateSuffix = new Date().toISOString().split('T')[0];
 
-            // Generate the final ZIP file
-            const zipBlob = await zip.generateAsync({
-                type: 'blob',
-                compression: 'DEFLATE',
-                compressionOptions: { level: 6 }
+            zipPartBlobs.forEach((zipBlob, index) => {
+                const isMultipart = zipPartBlobs.length > 1;
+                const filename = isMultipart
+                    ? `Invoices_PDF_${dateSuffix}_Part_${index + 1}.zip`
+                    : `Invoices_PDF_${dateSuffix}.zip`;
+                triggerBlobDownload(zipBlob, filename);
             });
 
-            // Trigger the download
-            triggerBlobDownload(zipBlob, `Invoices_PDF_${new Date().toISOString().split('T')[0]}.zip`);
-            showToast(`Successfully created ZIP file with ${totalRows} PDF invoices and merged merchant files!`, 'success');
+            setZipProgress(100);
+            showToast(
+                zipPartBlobs.length > 1
+                    ? `Created ${zipPartBlobs.length} ZIP parts under 5 MB each for ${totalRows} invoices.`
+                    : `Successfully created ZIP file with ${totalRows} PDF invoices and merged merchant files!`,
+                'success'
+            );
         } catch (err) {
             console.error('ZIP/PDF generation error:', err);
             setError('Error creating ZIP file: ' + err.message);
@@ -432,7 +656,10 @@ export default function FinoInvoiceWorkspace() {
             setActivePdfRowIndex(invoiceDocument.actualRowIndex);
             setActivePdfFilename(`${invoiceDocument.filename}.pdf`);
 
-            const pdfBlob = await generatePdfBlob(invoiceDocument.htmlContent);
+            const pdfBlob = await generatePdfBlob(invoiceDocument.htmlContent, {
+                maxBytes: MAX_OPTIMIZED_OUTPUT_BYTES,
+                label: `${invoiceDocument.filename}.pdf`,
+            });
             triggerBlobDownload(pdfBlob, `${invoiceDocument.filename}.pdf`);
         } catch (err) {
             console.error('Single PDF generation error:', err);
@@ -515,7 +742,10 @@ export default function FinoInvoiceWorkspace() {
 
         try {
             const invoiceDocuments = rowsToPrint.map((row, index) => getInvoiceDocument(row, preview.data.indexOf(row)));
-            const mergedPdfBlob = await generateMergedPdfBlobFromHtmlList(invoiceDocuments.map((entry) => entry.htmlContent));
+            const mergedPdfBlob = await generateMergedPdfBlobFromHtmlList(invoiceDocuments.map((entry) => entry.htmlContent), {
+                maxBytes: MAX_OPTIMIZED_OUTPUT_BYTES,
+                label: 'Merged print PDF',
+            });
             openPdfBlobPreview(mergedPdfBlob, 'invoice-print-preview');
             setIsPrintModalOpen(false);
             showToast(`Preview opened for ${invoiceDocuments.length} invoice${invoiceDocuments.length > 1 ? 's' : ''} with current data.`, 'success');
@@ -823,27 +1053,41 @@ export default function FinoInvoiceWorkspace() {
                                 </div>
 
                                 {isReadyToGenerate && (
-                                    <div className="mt-4 flex justify-center gap-3">
-                                        <button onClick={viewAllInTabs} disabled={isViewingInTabs || isPdfActionInProgress} className="inline-flex items-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <div className="mt-4 flex flex-wrap justify-center gap-3">
+                                        <button onClick={viewAllInTabs} disabled={isViewingInTabs || isPdfActionInProgress} className="inline-flex min-w-[11rem] items-center justify-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                             <Eye className="w-4 h-4 mr-2" />
                                             {isViewingInTabs ? `Opening ${preview.data.length} Tabs...` : 'View All in Tabs'}
                                         </button>
 
-                                        <button onClick={openPrintModal} disabled={isPdfActionInProgress || isViewingInTabs} className="inline-flex items-center px-6 py-2 bg-white text-green-700 border border-green-200 hover:bg-green-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <button onClick={openPrintModal} disabled={isPdfActionInProgress || isViewingInTabs} className="inline-flex min-w-[8rem] items-center justify-center px-6 py-2 bg-white text-green-700 border border-green-200 hover:bg-green-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                             <Printer className="w-4 h-4 mr-2" />
                                             Print
                                         </button>
 
-                                        <button onClick={downloadAllAsZip} disabled={isPdfActionInProgress || isViewingInTabs} className="inline-flex items-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                            {generatingZip ? (
+                                        <button onClick={downloadMergedPdfOnly} disabled={isPdfActionInProgress || isViewingInTabs} className="inline-flex min-w-[11rem] items-center justify-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                            {isDownloadingMerged ? (
                                                 <>
                                                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                                                    Creating merged PDF...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Download className="w-4 h-4 mr-2" />
+                                                    {`Download Merged PDF (${preview.data.length})`}
+                                                </>
+                                            )}
+                                        </button>
+
+                                        <button onClick={downloadSeparateFilesZip} disabled={isPdfActionInProgress || isViewingInTabs} className="inline-flex min-w-[11rem] items-center justify-center px-6 py-2 bg-white text-green-700 border border-green-200 hover:bg-green-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                            {generatingZip ? (
+                                                <>
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-700 border-t-transparent mr-2"></div>
                                                     {`Creating ZIP... ${zipProgress}%`}
                                                 </>
                                             ) : (
                                                 <>
                                                     <Download className="w-4 h-4 mr-2" />
-                                                    {`Download All (${preview.data.length})`}
+                                                    Download Separate Files
                                                 </>
                                             )}
                                         </button>
@@ -854,7 +1098,7 @@ export default function FinoInvoiceWorkspace() {
 
                         {preview && (
                             <div className="border-t border-gray-200 bg-white p-5 md:p-7">
-                                <div className="flex items-center justify-between mb-4">
+                                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                     <h3 className="text-base font-semibold text-gray-900">Data Preview</h3>
                                     <div className="text-xs text-gray-600">{startIndex + 1}-{Math.min(endIndex, preview.data.length)} of {preview.data.length}</div>
                                 </div>
@@ -937,7 +1181,7 @@ export default function FinoInvoiceWorkspace() {
                                                             </td>
                                                             <td className="px-4 py-2 text-center">
                                                                 {isReadyToGenerate ? (
-                                                                    <div className="flex items-center justify-center gap-2">
+                                                                    <div className="flex flex-wrap items-center justify-center gap-2">
                                                                         <button
                                                                             onClick={() => previewSingleInvoice(index)}
                                                                             disabled={isPdfActionInProgress}
@@ -976,13 +1220,13 @@ export default function FinoInvoiceWorkspace() {
                                     </div>
                                 </div>
 
-                                <div className="mt-4 flex items-center justify-between">
+                                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div className="text-xs text-gray-600">Page {currentPage} of {totalPages}</div>
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={goToPreviousPage} disabled={currentPage === 1} className="flex items-center px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button onClick={goToPreviousPage} disabled={currentPage === 1} className="flex items-center justify-center px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                             <ChevronLeft className="w-3 h-3 mr-1" />Previous
                                         </button>
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex flex-wrap items-center gap-1">
                                             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                                 let pageNumber;
                                                 if (totalPages <= 5) {
@@ -1001,7 +1245,7 @@ export default function FinoInvoiceWorkspace() {
                                                 );
                                             })}
                                         </div>
-                                        <button onClick={goToNextPage} disabled={currentPage === totalPages} className="flex items-center px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                        <button onClick={goToNextPage} disabled={currentPage === totalPages} className="flex items-center justify-center px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                             Next<ChevronRight className="w-3 h-3 ml-1" />
                                         </button>
                                     </div>
@@ -1009,15 +1253,17 @@ export default function FinoInvoiceWorkspace() {
                             </div>
                         )}
 
-                        {(generatingZip || isPrinting || activePdfRowIndex !== null) && (
+                        {(generatingZip || isDownloadingMerged || isPrinting || activePdfRowIndex !== null) && (
                             <div className="border-t border-gray-200 bg-gray-50 p-5 md:p-7">
                                 <div className="text-center mb-3">
                                     <h4 className="text-sm font-semibold text-gray-900">
-                                        {generatingZip ? 'Creating PDF ZIP File' : isPrinting ? 'Preparing Print PDF' : 'Generating PDF'}
+                                        {generatingZip ? 'Creating PDF ZIP File' : isDownloadingMerged ? 'Creating Merged PDF' : isPrinting ? 'Preparing Print PDF' : 'Generating PDF'}
                                     </h4>
                                     <p className="text-xs text-gray-600 mt-1">
                                         {generatingZip
                                             ? 'Please wait while all invoices are rendered.'
+                                            : isDownloadingMerged
+                                                ? 'Please wait while the merged invoice PDF is generated.'
                                             : isPrinting
                                                 ? 'Please wait while the merged PDF is generated for printing.'
                                                 : `Preparing ${activePdfFilename || 'invoice.pdf'} for download.`}
