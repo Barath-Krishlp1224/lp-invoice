@@ -2,13 +2,14 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, DollarSign, Copy, Search, Tag, Eye } from 'lucide-react';
+import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, DollarSign, Copy, Search, Tag, Eye, Printer } from 'lucide-react';
 import { APP_ASSETS } from '../../../constants/assets';
 import useInvoiceDataProcessing from '../../file-processing/hooks/useInvoiceDataProcessing';
 import { generateProfessionalInvoiceHTML, formatCellValue } from '../utils/easybuzzInvoiceTemplate'; 
 import { detectRequiredColumns as detectPreviewColumns } from '../../file-processing/utils/columnDetection';
-import { createUniqueFilenameTracker, generatePdfBlobFromHtml, getUniquePdfBasename, triggerBlobDownload } from '../../file-processing/utils/pdfGeneration';
+import { createUniqueFilenameTracker, generateMergedPdfBlobFromHtmlList, generatePdfBlobFromHtml, getUniquePdfBasename, openPdfBlobPreview, sanitizePdfPathSegment, triggerBlobDownload } from '../../file-processing/utils/pdfGeneration';
 import { getMerchantCatalog, getMerchantConfigByKey, getMerchantKeyFromName } from '../utils/merchantConfigs';
+import PrintSelectionModal from '../../file-processing/components/PrintSelectionModal';
 
 export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' }) {
     const [file, setFile] = useState(null);
@@ -22,10 +23,14 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
     const [zipProgress, setZipProgress] = useState(0);
     const [activePdfRowIndex, setActivePdfRowIndex] = useState<number | null>(null);
     const [activePdfFilename, setActivePdfFilename] = useState('');
+    const [isPrinting, setIsPrinting] = useState(false);
     const [dateColumn, setDateColumn] = useState(''); 
     const [customerNameColumn, setCustomerNameColumn] = useState('');
     const [selectedMerchantFilters, setSelectedMerchantFilters] = useState([]);
     const [isMerchantFilterOpen, setIsMerchantFilterOpen] = useState(false);
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+    const [printSelectionMode, setPrintSelectionMode] = useState('all');
+    const [selectedPrintMerchants, setSelectedPrintMerchants] = useState([]);
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     const [tableKey, setTableKey] = useState(0);
     const [startingSequences, setStartingSequences] = useState({});
@@ -260,6 +265,67 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
 
     const getActualRowIndex = (rowData) => preview ? preview.data.indexOf(rowData) : -1;
 
+    const getMerchantLabel = (rowData) => {
+        if (!isOthersWorkspace) {
+            return merchantCatalog.sparkleap.displayName;
+        }
+
+        const merchantName = merchantColumn
+            ? formatCellValue(rowData?.[merchantColumn], merchantColumn).trim()
+            : '';
+
+        if (merchantName) {
+            return merchantName;
+        }
+
+        const merchantConfig = getMerchantConfigByKey(getRowMerchantKey(rowData), workspaceMode);
+        return merchantConfig?.displayName || 'Merchant';
+    };
+
+    const getInvoiceDocument = (rowData, actualRowIndex = getActualRowIndex(rowData)) => {
+        const invoiceNumber = calculateInvoiceNumber(actualRowIndex);
+        const merchantLabel = getMerchantLabel(rowData);
+        const htmlContent = generateProfessionalInvoiceHTML(
+            rowData,
+            invoiceNumber,
+            rrnColumn,
+            upiColumn,
+            customerNameColumn,
+            merchantColumn,
+            amountColumn,
+            dateColumn,
+            workspaceMode
+        );
+
+        return {
+            actualRowIndex,
+            rowData,
+            merchantLabel,
+            filename: getFilenameFromRRN(rowData),
+            htmlContent,
+        };
+    };
+
+    const getMerchantNamesForPrint = () => {
+        if (!preview) {
+            return [];
+        }
+
+        return Array.from(new Set(preview.data.map((row) => getMerchantLabel(row)))).sort((a, b) => a.localeCompare(b));
+    };
+
+    const getRowsForPrintSelection = () => {
+        if (!preview) {
+            return [];
+        }
+
+        if (printSelectionMode === 'all') {
+            return preview.data;
+        }
+
+        return preview.data.filter((row) => selectedPrintMerchants.includes(getMerchantLabel(row)));
+    };
+
     const handleMerchantFilterToggle = (merchantName) => {
         setSelectedMerchantFilters((prev) => {
             if (merchantName === '') {
@@ -378,29 +444,14 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
 
         try {
             filteredPreviewRows.forEach((rowData, i) => {
-                const actualRowIndex = getActualRowIndex(rowData);
-                const currentInvoiceNumber = calculateInvoiceNumber(actualRowIndex);
-
-                const htmlContent = generateProfessionalInvoiceHTML(
-                    rowData,
-                    currentInvoiceNumber,
-                    rrnColumn,
-                    upiColumn,
-                    customerNameColumn,
-                    merchantColumn,
-                    amountColumn,
-                    dateColumn,
-                    workspaceMode
-                );
-                
-                const filename = getFilenameFromRRN(rowData);
+                const invoiceDocument = getInvoiceDocument(rowData);
                 
                 const newWindow = window.open('about:blank', `invoice-${i}`, 'width=800,height=600');
                 if (newWindow) {
                     newWindow.document.write(`
                         <html>
                         <head>
-                            <title>${filename}.pdf</title>
+                            <title>${invoiceDocument.filename}.pdf</title>
                             <style>
                                 @media print {
                                     @page { size: A4; margin: 0; }
@@ -409,7 +460,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                             </style>
                         </head>
                         <body>
-                            ${htmlContent}
+                            ${invoiceDocument.htmlContent}
                         </body>
                         </html>
                     `);
@@ -427,7 +478,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         }
     };
 
-    const isPdfActionInProgress = generatingZip || activePdfRowIndex !== null;
+    const isPdfActionInProgress = generatingZip || isPrinting || activePdfRowIndex !== null;
 
     const downloadAllAsZip = async () => {
         if (!preview || !filteredPreviewRows.length) return;
@@ -448,40 +499,53 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
 
         try {
             const zip = new window.JSZip();
-            const totalRows = filteredPreviewRows.length;
-            const filenameTracker = createUniqueFilenameTracker();
-            let generatedCount = 0;
+            const invoiceDocuments = filteredPreviewRows.map((rowData) => getInvoiceDocument(rowData));
+            const totalRows = invoiceDocuments.length;
+            const merchantTrackers = new Map();
+            const merchantGroups = new Map();
 
-            for (let i = 0; i < totalRows; i++) {
-                const rowData = filteredPreviewRows[i];
-                const actualRowIndex = getActualRowIndex(rowData);
-                const currentInvoiceNumber = calculateInvoiceNumber(actualRowIndex);
+            invoiceDocuments.forEach((document) => {
+                const merchantKey = document.merchantLabel;
+                if (!merchantGroups.has(merchantKey)) {
+                    merchantGroups.set(merchantKey, []);
+                    merchantTrackers.set(merchantKey, createUniqueFilenameTracker());
+                }
 
-                let htmlContent = generateProfessionalInvoiceHTML(
-                    rowData,
-                    currentInvoiceNumber,
-                    rrnColumn,
-                    upiColumn,
-                    customerNameColumn,
-                    merchantColumn,
-                    amountColumn,
-                    dateColumn,
-                    workspaceMode
-                );
+                const tracker = merchantTrackers.get(merchantKey);
+                const uniqueFilename = getUniquePdfBasename(document.filename, tracker);
+                document.uniqueFilename = uniqueFilename;
+                merchantGroups.get(merchantKey).push({
+                    ...document,
+                    uniqueFilename,
+                });
+            });
 
-                const filename = getUniquePdfBasename(getFilenameFromRRN(rowData), filenameTracker);
-                const pdfBlob = await generatePdfBlob(htmlContent);
+            for (let i = 0; i < invoiceDocuments.length; i += 1) {
+                const invoiceDocument = invoiceDocuments[i];
+                const pdfBlob = await generatePdfBlob(invoiceDocument.htmlContent);
+                const merchantFolder = zip.folder(sanitizePdfPathSegment(invoiceDocument.merchantLabel, 'Merchant'));
 
-                zip.file(`${filename}.pdf`, pdfBlob);
-                generatedCount += 1;
-                
-                setZipProgress(Math.round(((i + 1) / totalRows) * 100));
+                merchantFolder.file(`${invoiceDocument.uniqueFilename}.pdf`, pdfBlob);
+                setZipProgress(Math.round(((i + 1) / totalRows) * 80));
 
                 if (i % 5 === 0) {
-                    // Slight pause to prevent UI freezing
                     await new Promise(resolve => setTimeout(resolve, 0));
                 }
             }
+
+            const merchantEntriesList = Array.from(merchantGroups.entries());
+            for (let index = 0; index < merchantEntriesList.length; index += 1) {
+                const [merchantLabel, entries] = merchantEntriesList[index];
+                const merchantFolder = zip.folder(sanitizePdfPathSegment(merchantLabel, 'Merchant'));
+                const mergedPdfBlob = await generateMergedPdfBlobFromHtmlList(entries.map((entry) => entry.htmlContent));
+
+                merchantFolder.file('Merged.pdf', mergedPdfBlob);
+                setZipProgress(80 + Math.round(((index + 1) / (merchantEntriesList.length + 1)) * 20));
+            }
+
+            const mergedAllPdfBlob = await generateMergedPdfBlobFromHtmlList(invoiceDocuments.map((entry) => entry.htmlContent));
+            zip.file('Merged_All.pdf', mergedAllPdfBlob);
+            setZipProgress(100);
 
             const zipBlob = await zip.generateAsync({
                 type: 'blob',
@@ -490,7 +554,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
             });
 
             triggerBlobDownload(zipBlob, `Invoices_PDF_${new Date().toISOString().split('T')[0]}.zip`);
-            showToast(`Successfully created ZIP file with ${generatedCount} PDF invoices!`, 'success');
+            showToast(`Successfully created ZIP file with ${totalRows} PDF invoices and merged merchant files!`, 'success');
         } catch (err) {
             console.error('ZIP/PDF generation error:', err);
             setError('Error creating ZIP file: ' + err.message);
@@ -512,27 +576,13 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
 
         try {
             const rowData = preview.data[startIndex + index];
-            const actualRowIndex = startIndex + index;
-            const invoiceNumber = calculateInvoiceNumber(actualRowIndex);
-            const filename = getFilenameFromRRN(rowData);
+            const invoiceDocument = getInvoiceDocument(rowData, startIndex + index);
 
-            setActivePdfRowIndex(actualRowIndex);
-            setActivePdfFilename(`${filename}.pdf`);
+            setActivePdfRowIndex(invoiceDocument.actualRowIndex);
+            setActivePdfFilename(`${invoiceDocument.filename}.pdf`);
 
-            const htmlContent = generateProfessionalInvoiceHTML(
-                rowData,
-                invoiceNumber,
-                rrnColumn,
-                upiColumn,
-                customerNameColumn,
-                merchantColumn,
-                amountColumn,
-                dateColumn,
-                workspaceMode
-            );
-
-            const pdfBlob = await generatePdfBlob(htmlContent);
-            triggerBlobDownload(pdfBlob, `${filename}.pdf`);
+            const pdfBlob = await generatePdfBlob(invoiceDocument.htmlContent);
+            triggerBlobDownload(pdfBlob, `${invoiceDocument.filename}.pdf`);
         } catch (err) {
             console.error('Single PDF generation error:', err);
             setError('Error generating PDF: ' + err.message);
@@ -554,25 +604,76 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
 
         try {
             const rowData = preview.data[startIndex + index];
-            const actualRowIndex = startIndex + index;
-            const invoiceNumber = calculateInvoiceNumber(actualRowIndex);
+            const invoiceDocument = getInvoiceDocument(rowData, startIndex + index);
 
-            const htmlContent = generateProfessionalInvoiceHTML(
-                rowData,
-                invoiceNumber,
-                rrnColumn,
-                upiColumn,
-                customerNameColumn,
-                merchantColumn,
-                amountColumn,
-                dateColumn,
-                workspaceMode
-            );
-
-            previewInvoice(htmlContent, `preview-${getFilenameFromRRN(rowData)}`);
+            previewInvoice(invoiceDocument.htmlContent, `preview-${invoiceDocument.filename}`);
         } catch (err) {
             console.error('Single invoice preview error:', err);
             setError('Error opening preview: ' + err.message);
+        }
+    };
+
+    const openPrintModal = () => {
+        const merchants = getMerchantNamesForPrint();
+
+        setPrintSelectionMode('all');
+        setSelectedPrintMerchants(merchants.length === 1 ? merchants : []);
+        setIsPrintModalOpen(true);
+    };
+
+    const handlePrintModeChange = (mode) => {
+        setPrintSelectionMode(mode);
+
+        if (mode === 'all') {
+            setSelectedPrintMerchants([]);
+            return;
+        }
+
+        setSelectedPrintMerchants([]);
+    };
+
+    const handlePrintMerchantToggle = (merchantName) => {
+        setSelectedPrintMerchants((prev) => {
+            if (prev.includes(merchantName)) {
+                return prev.filter((item) => item !== merchantName);
+            }
+
+            return [...prev, merchantName];
+        });
+    };
+
+    const handlePrintMerchantSelectAll = () => {
+        const merchants = getMerchantNamesForPrint();
+        setSelectedPrintMerchants((prev) => prev.length === merchants.length ? [] : merchants);
+    };
+
+    const handlePrintInvoices = async () => {
+        if (!preview || !preview.data.length) {
+            return;
+        }
+
+        const rowsToPrint = getRowsForPrintSelection();
+        if (!rowsToPrint.length) {
+            setError('Please select at least one merchant to print.');
+            return;
+        }
+
+        setIsPrinting(true);
+        setActivePdfFilename('Merged_Print.pdf');
+        setError(null);
+
+        try {
+            const invoiceDocuments = rowsToPrint.map((row) => getInvoiceDocument(row));
+            const mergedPdfBlob = await generateMergedPdfBlobFromHtmlList(invoiceDocuments.map((entry) => entry.htmlContent));
+            openPdfBlobPreview(mergedPdfBlob, 'invoice-print-preview');
+            setIsPrintModalOpen(false);
+            showToast(`Preview opened for ${invoiceDocuments.length} invoice${invoiceDocuments.length > 1 ? 's' : ''} with current data.`, 'success');
+        } catch (err) {
+            console.error('Print generation error:', err);
+            setError('Error preparing print file: ' + err.message);
+        } finally {
+            setIsPrinting(false);
+            setActivePdfFilename('');
         }
     };
 
@@ -587,6 +688,9 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         setCustomerNameColumn('');
         setSelectedMerchantFilters([]);
         setIsMerchantFilterOpen(false);
+        setIsPrintModalOpen(false);
+        setPrintSelectionMode('all');
+        setSelectedPrintMerchants([]);
         setDuplicateColumn('');
         setShowDuplicates(false);
         if (fileInputRef.current) {
@@ -933,6 +1037,11 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             {isViewingInTabs ? `Opening ${filteredPreviewRows.length} Tabs...` : 'View All in Tabs'}
                                         </button>
 
+                                        <button onClick={openPrintModal} disabled={isPdfActionInProgress || isViewingInTabs} className="inline-flex items-center px-6 py-2 bg-white text-green-700 border border-green-200 hover:bg-green-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <Printer className="w-4 h-4 mr-2" />
+                                            Print
+                                        </button>
+
                                         <button onClick={downloadAllAsZip} disabled={isPdfActionInProgress || isViewingInTabs} className="inline-flex items-center px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                             {generatingZip ? (
                                                 <>
@@ -1150,14 +1259,18 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                             </div>
                         )}
 
-                        {(generatingZip || activePdfRowIndex !== null) && (
+                        {(generatingZip || isPrinting || activePdfRowIndex !== null) && (
                             <div className="border-t border-gray-200 bg-gray-50 p-5 md:p-7">
                                 <div className="text-center mb-3">
                                     <h4 className="text-sm font-semibold text-gray-900">
-                                        {generatingZip ? 'Creating PDF ZIP File' : 'Generating PDF'}
+                                        {generatingZip ? 'Creating PDF ZIP File' : isPrinting ? 'Preparing Print PDF' : 'Generating PDF'}
                                     </h4>
                                     <p className="text-xs text-gray-600 mt-1">
-                                        {generatingZip ? 'Please wait while all invoices are rendered.' : `Preparing ${activePdfFilename || 'invoice.pdf'} for download.`}
+                                        {generatingZip
+                                            ? 'Please wait while all invoices are rendered.'
+                                            : isPrinting
+                                                ? 'Please wait while the merged PDF is generated for printing.'
+                                                : `Preparing ${activePdfFilename || 'invoice.pdf'} for download.`}
                                     </p>
                                 </div>
                                 <div className="flex items-center justify-center gap-3">
@@ -1171,6 +1284,18 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                     </div>
                 </div>
             </div>
+            <PrintSelectionModal
+                isOpen={isPrintModalOpen}
+                merchants={getMerchantNamesForPrint()}
+                selectionMode={printSelectionMode}
+                selectedMerchants={selectedPrintMerchants}
+                onModeChange={handlePrintModeChange}
+                onMerchantToggle={handlePrintMerchantToggle}
+                onSelectAllMerchants={handlePrintMerchantSelectAll}
+                onClose={() => !isPrinting && setIsPrintModalOpen(false)}
+                onConfirm={handlePrintInvoices}
+                isSubmitting={isPrinting}
+            />
         </div>
     );
 }
