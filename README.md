@@ -1,5 +1,16 @@
 This is a Next.js invoice generation project.
 
+## MongoDB Notes Setup
+
+To store merchant notes from the bottom-right notes panel, configure:
+
+```bash
+MONGODB_URI=your-mongodb-connection-string
+MONGODB_DB=lp-invoice
+```
+
+The notes widget stores merchant notes in MongoDB and does not change invoice numbering or the table.
+
 ## Getting Started
 
 First, run the development server:

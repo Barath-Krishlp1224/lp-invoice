@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, DollarSign, Copy, Search, Tag, Eye, Printer } from 'lucide-react';
+import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, ChevronLeft, ChevronRight, DollarSign, Copy, Search, Tag, Eye, Printer, ArrowUpRight, X, NotebookPen } from 'lucide-react';
 import { APP_ASSETS } from '../../../constants/assets';
 import useInvoiceDataProcessing from '../../file-processing/hooks/useInvoiceDataProcessing';
 import { generateProfessionalInvoiceHTML, formatCellValue } from '../utils/easybuzzInvoiceTemplate'; 
@@ -35,6 +35,13 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
     const [tableKey, setTableKey] = useState(0);
     const [startingSequences, setStartingSequences] = useState({});
     const [tempSequences, setTempSequences] = useState({});
+    const [isMerchantNotesOpen, setIsMerchantNotesOpen] = useState(false);
+    const [selectedNoteMerchantKey, setSelectedNoteMerchantKey] = useState(null);
+    const [merchantNotes, setMerchantNotes] = useState({});
+    const [merchantNoteDrafts, setMerchantNoteDrafts] = useState({});
+    const [merchantNoteEditModes, setMerchantNoteEditModes] = useState({});
+    const [isSavingNote, setIsSavingNote] = useState(false);
+    const [currentNoteTimestamp, setCurrentNoteTimestamp] = useState('');
 
     const {
         loading,
@@ -130,6 +137,61 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         setToast({ show: true, message, type });
     };
 
+    const loadMerchantNotes = async () => {
+        const response = await fetch(`/api/merchant-notes?workspaceMode=${encodeURIComponent(workspaceMode)}`, {
+            cache: 'no-store',
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+            throw new Error(payload?.error || 'Failed to load merchant notes.');
+        }
+
+        return payload?.notes || {};
+    };
+
+    const saveMerchantNote = async (merchantKey, note) => {
+        const response = await fetch('/api/merchant-notes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                workspaceMode,
+                merchantKey,
+                note,
+            }),
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+            throw new Error(payload?.error || 'Failed to save merchant note.');
+        }
+
+        return payload;
+    };
+
+    const formatNoteTimestamp = (value) => {
+        if (!value) {
+            return '--';
+        }
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return '--';
+        }
+
+        return date.toLocaleString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+        });
+    };
+
     useEffect(() => {
         const scriptZip = document.createElement('script');
         scriptZip.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
@@ -163,6 +225,41 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
             }
         }
     }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const hydrateNotes = async () => {
+            try {
+                const notes = await loadMerchantNotes();
+                if (!isMounted) {
+                    return;
+                }
+
+                setMerchantNotes(notes);
+                setMerchantNoteDrafts(
+                    Object.entries(notes).reduce((accumulator, [merchantKey, value]) => {
+                        accumulator[merchantKey] = value?.note || '';
+                        return accumulator;
+                    }, {})
+                );
+                setMerchantNoteEditModes(
+                    Object.entries(notes).reduce((accumulator, [merchantKey, value]) => {
+                        accumulator[merchantKey] = !value?.note;
+                        return accumulator;
+                    }, {})
+                );
+            } catch (e) {
+                console.error('Failed to load merchant notes', e);
+            }
+        };
+
+        hydrateNotes();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [workspaceMode]);
 
     const handleSequenceChange = (merchantKey, value) => {
         // Only allow digits, no length restriction
@@ -262,6 +359,25 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
 
         return configuredMerchantList.filter((config) => seenMerchantKeys.has(config.key));
     };
+
+    const merchantNoteSuggestions = [...configuredMerchantList].sort((a, b) =>
+        a.displayName.localeCompare(b.displayName)
+    );
+
+    const selectedNoteMerchantConfig = selectedNoteMerchantKey
+        ? getMerchantConfigByKey(selectedNoteMerchantKey, workspaceMode)
+        : merchantNoteSuggestions[0] || null;
+
+    const selectedMerchantNoteRecord = selectedNoteMerchantConfig
+        ? merchantNotes[selectedNoteMerchantConfig.key]
+        : null;
+    const selectedMerchantNoteText = selectedNoteMerchantConfig
+        ? merchantNoteDrafts[selectedNoteMerchantConfig.key] ?? selectedMerchantNoteRecord?.note ?? ''
+        : '';
+    const isSelectedMerchantNoteEditing = selectedNoteMerchantConfig
+        ? merchantNoteEditModes[selectedNoteMerchantConfig.key] ?? !selectedMerchantNoteRecord?.note
+        : false;
+    const selectedMerchantSavedAt = selectedMerchantNoteRecord?.updatedAt || null;
 
     const getActualRowIndex = (rowData) => preview ? preview.data.indexOf(rowData) : -1;
 
@@ -695,6 +811,86 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         setShowDuplicates(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
+        }
+    };
+
+    useEffect(() => {
+        if (!merchantNoteSuggestions.length) {
+            setSelectedNoteMerchantKey(null);
+            return;
+        }
+
+        if (!selectedNoteMerchantKey || !merchantNoteSuggestions.some((config) => config.key === selectedNoteMerchantKey)) {
+            setSelectedNoteMerchantKey(merchantNoteSuggestions[0].key);
+        }
+    }, [workspaceMode, selectedNoteMerchantKey]);
+
+    useEffect(() => {
+        if (!selectedNoteMerchantKey) {
+            setCurrentNoteTimestamp('');
+            return;
+        }
+
+        setCurrentNoteTimestamp(formatNoteTimestamp(new Date().toISOString()));
+    }, [selectedNoteMerchantKey, isMerchantNotesOpen]);
+
+    const handleMerchantNoteChange = (merchantKey, value) => {
+        setMerchantNoteDrafts((prev) => ({
+            ...prev,
+            [merchantKey]: value,
+        }));
+    };
+
+    const handleMerchantNoteEdit = (merchantKey) => {
+        setMerchantNoteDrafts((prev) => ({
+            ...prev,
+            [merchantKey]: prev[merchantKey] ?? merchantNotes[merchantKey]?.note ?? '',
+        }));
+        setMerchantNoteEditModes((prev) => ({
+            ...prev,
+            [merchantKey]: true,
+        }));
+        setCurrentNoteTimestamp(formatNoteTimestamp(new Date().toISOString()));
+    };
+
+    const handleMerchantNoteCancel = (merchantKey) => {
+        setMerchantNoteDrafts((prev) => ({
+            ...prev,
+            [merchantKey]: merchantNotes[merchantKey]?.note ?? '',
+        }));
+        setMerchantNoteEditModes((prev) => ({
+            ...prev,
+            [merchantKey]: !(merchantNotes[merchantKey]?.note),
+        }));
+    };
+
+    const handleMerchantNoteSave = async () => {
+        if (!selectedNoteMerchantConfig) {
+            return;
+        }
+
+        setIsSavingNote(true);
+
+        try {
+            const note = merchantNoteDrafts[selectedNoteMerchantConfig.key] ?? '';
+            const savedNote = await saveMerchantNote(selectedNoteMerchantConfig.key, note);
+            setMerchantNotes((prev) => ({
+                ...prev,
+                [selectedNoteMerchantConfig.key]: {
+                    note,
+                    updatedAt: savedNote?.updatedAt || new Date().toISOString(),
+                },
+            }));
+            setMerchantNoteEditModes((prev) => ({
+                ...prev,
+                [selectedNoteMerchantConfig.key]: false,
+            }));
+            showToast('Merchant note saved to MongoDB', 'success');
+        } catch (e) {
+            console.error('Failed to save merchant note', e);
+            showToast(e.message || 'Failed to save merchant note.', 'error');
+        } finally {
+            setIsSavingNote(false);
         }
     };
     
@@ -1296,6 +1492,143 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 onConfirm={handlePrintInvoices}
                 isSubmitting={isPrinting}
             />
+            <div className="fixed bottom-5 right-5 z-40 md:bottom-6 md:right-6">
+                {isMerchantNotesOpen && (
+                    <div className="mb-3 w-[520px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[28px] border border-[#d7dbc7] bg-[#fffef7] shadow-[0_20px_60px_rgba(15,23,42,0.18)]">
+                        <div className="flex items-center justify-between border-b border-[#e6e7d8] bg-[#f6f0cf] px-4 py-3">
+                            <div className="flex items-center gap-2">
+                                <NotebookPen className="h-4 w-4 text-[#6a5d1f]" />
+                                <div>
+                                    <p className="text-sm font-semibold text-[#4d4418]">Merchant Notes</p>
+                                    <p className="text-[11px] text-[#7a7142]">Saved separately in MongoDB. This does not change the table.</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setIsMerchantNotesOpen(false)}
+                                className="rounded-full p-1 text-[#6a5d1f] transition-colors hover:bg-[#efe7bf]"
+                                aria-label="Close merchant notes"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <div className="p-5">
+                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8a8157]">
+                                Suggestions
+                            </p>
+                            <div className="mb-5 flex max-h-28 flex-wrap gap-2 overflow-y-auto">
+                                {merchantNoteSuggestions.map((merchant) => {
+                                    const isSelected = selectedNoteMerchantConfig?.key === merchant.key;
+
+                                    return (
+                                        <button
+                                            key={merchant.key}
+                                            onClick={() => {
+                                                setSelectedNoteMerchantKey(merchant.key);
+                                                setCurrentNoteTimestamp(formatNoteTimestamp(new Date().toISOString()));
+                                            }}
+                                            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                                                isSelected
+                                                    ? 'border-[#d0b84f] bg-[#f7e8a6] text-[#5b4b10]'
+                                                    : 'border-[#ddd9c2] bg-white text-[#6b6749] hover:border-[#d0b84f]'
+                                            }`}
+                                        >
+                                            {merchant.displayName}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {selectedNoteMerchantConfig && (
+                                <div className="rounded-2xl border border-[#e4dfc5] bg-white p-4">
+                                    <div className="mb-4 flex flex-col gap-3 border-b border-[#efecd7] pb-4 md:flex-row md:items-start md:justify-between">
+                                        <div>
+                                            <p className="text-base font-semibold text-gray-900">
+                                                {selectedNoteMerchantConfig.displayName}
+                                            </p>
+                                            <p className="mt-1 text-[11px] text-gray-500">
+                                                Write anything here. It is stored only as a note for this merchant.
+                                            </p>
+                                        </div>
+                                        <div className="grid gap-2 text-left md:min-w-[220px]">
+                                            <div className="rounded-xl bg-[#faf6df] px-3 py-2">
+                                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a8157]">
+                                                    Current Date & Time
+                                                </p>
+                                                <p className="mt-1 text-xs font-medium text-[#4d4418]">
+                                                    {currentNoteTimestamp || '--'}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-xl bg-gray-50 px-3 py-2">
+                                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500">
+                                                    Last Saved
+                                                </p>
+                                                <p className="mt-1 text-xs font-medium text-gray-700">
+                                                    {selectedMerchantSavedAt ? formatNoteTimestamp(selectedMerchantSavedAt) : 'Not saved yet'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {isSelectedMerchantNoteEditing ? (
+                                        <textarea
+                                            value={selectedMerchantNoteText}
+                                            onChange={(e) => handleMerchantNoteChange(selectedNoteMerchantConfig.key, e.target.value)}
+                                            rows={8}
+                                            placeholder={`Write a note for ${selectedNoteMerchantConfig.displayName}...`}
+                                            className="w-full resize-none rounded-2xl border border-[#dfdcc9] bg-[#fffdf4] px-4 py-3 text-sm text-gray-800 outline-none transition-colors focus:border-[#d0b84f] focus:ring-2 focus:ring-[#f7e8a6]"
+                                        />
+                                    ) : (
+                                        <div className="min-h-[180px] whitespace-pre-wrap rounded-2xl border border-[#ece7ce] bg-[#fffdf4] px-4 py-3 text-sm leading-6 text-gray-800">
+                                            {selectedMerchantNoteText || 'No note added for this merchant yet.'}
+                                        </div>
+                                    )}
+                                    <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                        <p className="text-[11px] text-gray-500">
+                                            Saved note stays separate from invoice numbering.
+                                        </p>
+                                        <div className="flex items-center justify-end gap-2">
+                                            {!isSelectedMerchantNoteEditing && (
+                                                <button
+                                                    onClick={() => handleMerchantNoteEdit(selectedNoteMerchantConfig.key)}
+                                                    className="rounded-full border border-[#d8d1b0] bg-white px-4 py-2 text-xs font-semibold text-[#5e5630] transition-colors hover:bg-[#faf6df]"
+                                                >
+                                                    Edit Note
+                                                </button>
+                                            )}
+                                            {isSelectedMerchantNoteEditing && (
+                                                <button
+                                                    onClick={() => handleMerchantNoteCancel(selectedNoteMerchantConfig.key)}
+                                                    className="rounded-full border border-[#d8d1b0] bg-white px-4 py-2 text-xs font-semibold text-[#5e5630] transition-colors hover:bg-[#faf6df]"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={handleMerchantNoteSave}
+                                                disabled={isSavingNote || !isSelectedMerchantNoteEditing}
+                                                className="rounded-full bg-[#5f7c38] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#4f692f] disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                {isSavingNote
+                                                    ? 'Saving...'
+                                                    : selectedMerchantSavedAt
+                                                        ? 'Update Note'
+                                                        : 'Save Note'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+                <button
+                    onClick={() => setIsMerchantNotesOpen((prev) => !prev)}
+                    className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-green-600 to-emerald-500 text-white shadow-[0_18px_40px_rgba(22,163,74,0.35)] transition-transform hover:scale-105"
+                    aria-label={isMerchantNotesOpen ? 'Close merchant notes' : 'Open merchant notes'}
+                    title={isMerchantNotesOpen ? 'Close merchant notes' : 'Merchant notes'}
+                >
+                    {isMerchantNotesOpen ? <X className="h-6 w-6" /> : <ArrowUpRight className="h-6 w-6" />}
+                </button>
+            </div>
         </div>
     );
 }
