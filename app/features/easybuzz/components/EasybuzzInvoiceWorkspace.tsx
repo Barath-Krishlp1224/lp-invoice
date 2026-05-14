@@ -40,6 +40,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
     const [merchantNotes, setMerchantNotes] = useState({});
     const [merchantNoteDrafts, setMerchantNoteDrafts] = useState({});
     const [merchantNoteEditModes, setMerchantNoteEditModes] = useState({});
+    const [merchantNoteHistoryOpen, setMerchantNoteHistoryOpen] = useState({});
     const [isSavingNote, setIsSavingNote] = useState(false);
     const [currentNoteTimestamp, setCurrentNoteTimestamp] = useState('');
 
@@ -249,6 +250,12 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                         return accumulator;
                     }, {})
                 );
+                setMerchantNoteHistoryOpen(
+                    Object.entries(notes).reduce((accumulator, [merchantKey]) => {
+                        accumulator[merchantKey] = false;
+                        return accumulator;
+                    }, {})
+                );
             } catch (e) {
                 console.error('Failed to load merchant notes', e);
             }
@@ -378,6 +385,10 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         ? merchantNoteEditModes[selectedNoteMerchantConfig.key] ?? !selectedMerchantNoteRecord?.note
         : false;
     const selectedMerchantSavedAt = selectedMerchantNoteRecord?.updatedAt || null;
+    const selectedMerchantNoteHistory = selectedMerchantNoteRecord?.history || [];
+    const isSelectedMerchantHistoryOpen = selectedNoteMerchantConfig
+        ? merchantNoteHistoryOpen[selectedNoteMerchantConfig.key] || false
+        : false;
 
     const getActualRowIndex = (rowData) => preview ? preview.data.indexOf(rowData) : -1;
 
@@ -864,6 +875,13 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         }));
     };
 
+    const handleMerchantNoteHistoryToggle = (merchantKey) => {
+        setMerchantNoteHistoryOpen((prev) => ({
+            ...prev,
+            [merchantKey]: !prev[merchantKey],
+        }));
+    };
+
     const handleMerchantNoteSave = async () => {
         if (!selectedNoteMerchantConfig) {
             return;
@@ -879,9 +897,20 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 [selectedNoteMerchantConfig.key]: {
                     note,
                     updatedAt: savedNote?.updatedAt || new Date().toISOString(),
+                    history: [
+                        {
+                            note,
+                            savedAt: savedNote?.historyEntry?.savedAt || savedNote?.updatedAt || new Date().toISOString(),
+                        },
+                        ...(prev[selectedNoteMerchantConfig.key]?.history || []),
+                    ],
                 },
             }));
             setMerchantNoteEditModes((prev) => ({
+                ...prev,
+                [selectedNoteMerchantConfig.key]: false,
+            }));
+            setMerchantNoteHistoryOpen((prev) => ({
                 ...prev,
                 [selectedNoteMerchantConfig.key]: false,
             }));
@@ -1494,7 +1523,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
             />
             <div className="fixed bottom-5 right-5 z-40 md:bottom-6 md:right-6">
                 {isMerchantNotesOpen && (
-                    <div className="mb-3 w-[520px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[28px] border border-[#d7dbc7] bg-[#fffef7] shadow-[0_20px_60px_rgba(15,23,42,0.18)]">
+                    <div className="mb-3 w-[820px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[28px] border border-[#d7dbc7] bg-[#fffef7] shadow-[0_20px_60px_rgba(15,23,42,0.18)]">
                         <div className="flex items-center justify-between border-b border-[#e6e7d8] bg-[#f6f0cf] px-4 py-3">
                             <div className="flex items-center gap-2">
                                 <NotebookPen className="h-4 w-4 text-[#6a5d1f]" />
@@ -1539,7 +1568,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                             </div>
 
                             {selectedNoteMerchantConfig && (
-                                <div className="rounded-2xl border border-[#e4dfc5] bg-white p-4">
+                                <div className="flex h-[560px] flex-col rounded-2xl border border-[#e4dfc5] bg-white p-4">
                                     <div className="mb-4 flex flex-col gap-3 border-b border-[#efecd7] pb-4 md:flex-row md:items-start md:justify-between">
                                         <div>
                                             <p className="text-base font-semibold text-gray-900">
@@ -1568,24 +1597,33 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             </div>
                                         </div>
                                     </div>
-                                    {isSelectedMerchantNoteEditing ? (
-                                        <textarea
-                                            value={selectedMerchantNoteText}
-                                            onChange={(e) => handleMerchantNoteChange(selectedNoteMerchantConfig.key, e.target.value)}
-                                            rows={8}
-                                            placeholder={`Write a note for ${selectedNoteMerchantConfig.displayName}...`}
-                                            className="w-full resize-none rounded-2xl border border-[#dfdcc9] bg-[#fffdf4] px-4 py-3 text-sm text-gray-800 outline-none transition-colors focus:border-[#d0b84f] focus:ring-2 focus:ring-[#f7e8a6]"
-                                        />
-                                    ) : (
-                                        <div className="min-h-[180px] whitespace-pre-wrap rounded-2xl border border-[#ece7ce] bg-[#fffdf4] px-4 py-3 text-sm leading-6 text-gray-800">
-                                            {selectedMerchantNoteText || 'No note added for this merchant yet.'}
-                                        </div>
-                                    )}
-                                    <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                    <div className="min-h-0 flex-1 overflow-hidden">
+                                        {isSelectedMerchantNoteEditing ? (
+                                            <textarea
+                                                value={selectedMerchantNoteText}
+                                                onChange={(e) => handleMerchantNoteChange(selectedNoteMerchantConfig.key, e.target.value)}
+                                                placeholder={`Write a note for ${selectedNoteMerchantConfig.displayName}...`}
+                                                className="h-full w-full resize-none overflow-y-auto rounded-2xl border border-[#dfdcc9] bg-[#fffdf4] px-4 py-3 text-sm text-gray-800 outline-none transition-colors focus:border-[#d0b84f] focus:ring-2 focus:ring-[#f7e8a6]"
+                                            />
+                                        ) : (
+                                            <div className="h-full overflow-y-auto whitespace-pre-wrap rounded-2xl border border-[#ece7ce] bg-[#fffdf4] px-4 py-3 text-sm leading-6 text-gray-800">
+                                                {selectedMerchantNoteText || 'No note added for this merchant yet.'}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="mt-4 flex flex-col gap-3 border-t border-[#efecd7] pt-4 md:flex-row md:items-center md:justify-between">
                                         <p className="text-[11px] text-gray-500">
                                             Saved note stays separate from invoice numbering.
                                         </p>
                                         <div className="flex items-center justify-end gap-2">
+                                            {!isSelectedMerchantNoteEditing && (
+                                                <button
+                                                    onClick={() => handleMerchantNoteHistoryToggle(selectedNoteMerchantConfig.key)}
+                                                    className="rounded-full border border-[#d8d1b0] bg-white px-4 py-2 text-xs font-semibold text-[#5e5630] transition-colors hover:bg-[#faf6df]"
+                                                >
+                                                    {isSelectedMerchantHistoryOpen ? 'Hide History' : 'View History'}
+                                                </button>
+                                            )}
                                             {!isSelectedMerchantNoteEditing && (
                                                 <button
                                                     onClick={() => handleMerchantNoteEdit(selectedNoteMerchantConfig.key)}
@@ -1615,6 +1653,42 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             </button>
                                         </div>
                                     </div>
+                                    {isSelectedMerchantHistoryOpen && (
+                                        <div className="mt-4 rounded-2xl border border-[#ece7ce] bg-[#fffdf4] p-4">
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8a8157]">
+                                                    Note History
+                                                </p>
+                                                <p className="text-[11px] text-gray-500">
+                                                    {selectedMerchantNoteHistory.length} entr{selectedMerchantNoteHistory.length === 1 ? 'y' : 'ies'}
+                                                </p>
+                                            </div>
+                                            {selectedMerchantNoteHistory.length > 0 ? (
+                                                <div className="max-h-56 space-y-3 overflow-y-auto pr-1">
+                                                    {selectedMerchantNoteHistory.map((entry, index) => (
+                                                        <div
+                                                            key={`${entry.savedAt || 'note'}-${index}`}
+                                                            className="rounded-xl border border-[#e6e0bf] bg-white px-3 py-3"
+                                                        >
+                                                            <div className="mb-2 flex items-center justify-between gap-3">
+                                                                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8a8157]">
+                                                                    {index === 0 ? 'Latest' : `Entry ${selectedMerchantNoteHistory.length - index}`}
+                                                                </p>
+                                                                <p className="text-[11px] text-gray-500">
+                                                                    {entry.savedAt ? formatNoteTimestamp(entry.savedAt) : 'Unknown date'}
+                                                                </p>
+                                                            </div>
+                                                            <p className="whitespace-pre-wrap text-sm leading-6 text-gray-800">
+                                                                {entry.note || 'Empty note'}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-gray-500">No history available for this merchant yet.</p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
