@@ -7,7 +7,7 @@ import { APP_ASSETS } from '../../../constants/assets';
 import useInvoiceDataProcessing from '../../file-processing/hooks/useInvoiceDataProcessing';
 import { generateProfessionalInvoiceHTML, formatCellValue } from '../utils/easybuzzInvoiceTemplate'; 
 import { detectRequiredColumns as detectPreviewColumns } from '../../file-processing/utils/columnDetection';
-import { MAX_OPTIMIZED_OUTPUT_BYTES, createUniqueFilenameTracker, generateMergedPdfBlobFromHtmlList, generatePdfBlobFromHtml, getUniquePdfBasename, openPdfBlobPreview, sanitizePdfPathSegment, triggerBlobDownload } from '../../file-processing/utils/pdfGeneration';
+import { MAX_OPTIMIZED_OUTPUT_BYTES, buildZipBlob, createUniqueFilenameTracker, generateMergedPdfBlobFromHtmlList, generatePdfBlobFromHtml, generateSplitMergedPdfEntriesFromHtmlList, getUniquePdfBasename, isPdfRuntimeReady, openPdfBlobPreview, sanitizePdfPathSegment, triggerBlobDownload } from '../../file-processing/utils/pdfGeneration';
 import { getMerchantCatalog, getMerchantConfigByKey, getMerchantKeyFromName } from '../utils/merchantConfigs';
 import PrintSelectionModal from '../../file-processing/components/PrintSelectionModal';
 
@@ -17,139 +17,18 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         const usableBytes = Math.max(256 * 1024, MAX_OPTIMIZED_OUTPUT_BYTES - reservedZipOverhead);
         return Math.max(140 * 1024, Math.floor(usableBytes / Math.max(artifactCount, 1)));
     };
-    const ZIP_PART_RESERVED_BYTES = 256 * 1024;
-    const ZIP_PART_PAYLOAD_LIMIT = MAX_OPTIMIZED_OUTPUT_BYTES - ZIP_PART_RESERVED_BYTES;
-    const ZIP_GENERATION_OPTIONS = {
-        type: 'blob',
-        compression: 'DEFLATE',
-        compressionOptions: { level: 9 },
-    };
-    const estimateZipEntryBytes = (entry) => (entry.blob?.size || 0) + 4096 + (entry.path?.length || 0) * 2;
-    const splitEntryBatch = (entries) => {
-        const totalBytes = entries.reduce((sum, entry) => sum + estimateZipEntryBytes(entry), 0);
-        const targetBytes = totalBytes / 2;
-        const firstBatch = [];
-        let firstBatchBytes = 0;
-
-        for (let index = 0; index < entries.length; index += 1) {
-            const entry = entries[index];
-            if (firstBatch.length === 0 || firstBatchBytes < targetBytes) {
-                firstBatch.push(entry);
-                firstBatchBytes += estimateZipEntryBytes(entry);
-            } else {
-                break;
-            }
-        }
-
-        if (firstBatch.length === entries.length) {
-            firstBatch.pop();
-        }
-
-        return [firstBatch, entries.slice(firstBatch.length)];
-    };
-    const partitionZipEntries = (entries) => {
-        const parts = [];
-        let currentEntries = [];
-        let currentBytes = 0;
-
-        entries.forEach((entry) => {
-            const entryBytes = estimateZipEntryBytes(entry);
-
-            if (currentEntries.length > 0 && currentBytes + entryBytes > ZIP_PART_PAYLOAD_LIMIT) {
-                parts.push(currentEntries);
-                currentEntries = [];
-                currentBytes = 0;
-            }
-
-            currentEntries.push(entry);
-            currentBytes += entryBytes;
-        });
-
-        if (currentEntries.length > 0) {
-            parts.push(currentEntries);
-        }
-
-        return parts;
-    };
-    const buildZipBlobFromEntries = async (entries) => {
-        const zip = new window.JSZip();
-        entries.forEach((entry) => {
-            zip.file(entry.path, entry.blob);
-        });
-        return zip.generateAsync(ZIP_GENERATION_OPTIONS);
-    };
-    const buildSimpleZipBlob = async (files) => {
-        const zip = new window.JSZip();
-        files.forEach((file) => {
-            zip.file(file.filename, file.blob);
-        });
-        return zip.generateAsync(ZIP_GENERATION_OPTIONS);
-    };
-    const generateZipPartBlobs = async (entries) => {
-        const pendingBatches = partitionZipEntries(entries);
-        const finalBlobs = [];
-
-        while (pendingBatches.length > 0) {
-            const batch = pendingBatches.shift();
-
-            if (!batch || batch.length === 0) {
-                continue;
-            }
-
-            const zipBlob = await buildZipBlobFromEntries(batch);
-            if (zipBlob.size <= MAX_OPTIMIZED_OUTPUT_BYTES) {
-                finalBlobs.push(zipBlob);
-                continue;
-            }
-
-            if (batch.length === 1) {
-                throw new Error(
-                    `ZIP part containing ${batch[0].path} is ${(zipBlob.size / (1024 * 1024)).toFixed(2)} MB, which exceeds the 5 MB limit.`
-                );
-            }
-
-            const [firstHalf, secondHalf] = splitEntryBatch(batch);
-            pendingBatches.unshift(secondHalf, firstHalf);
-        }
-
-        return finalBlobs;
-    };
     const generateMergedPdfEntries = async (documents, {
         baseFilename,
         label,
     }) => {
-        const results = [];
-
-        const processChunk = async (chunkDocuments) => {
-            try {
-                const mergedPdfBlob = await generateMergedPdfBlobFromHtmlList(
-                    chunkDocuments.map((entry) => entry.htmlContent),
-                    {
-                        maxBytes: MAX_OPTIMIZED_OUTPUT_BYTES,
-                        label,
-                    }
-                );
-                results.push(mergedPdfBlob);
-            } catch (err) {
-                if (err?.code === 'PDF_SIZE_LIMIT_EXCEEDED' && chunkDocuments.length > 1) {
-                    const midPoint = Math.ceil(chunkDocuments.length / 2);
-                    await processChunk(chunkDocuments.slice(0, midPoint));
-                    await processChunk(chunkDocuments.slice(midPoint));
-                    return;
-                }
-
-                throw err;
+        return generateSplitMergedPdfEntriesFromHtmlList(
+            documents.map((entry) => entry.htmlContent),
+            {
+                baseFilename,
+                label,
+                maxBytes: MAX_OPTIMIZED_OUTPUT_BYTES,
             }
-        };
-
-        await processChunk(documents);
-
-        return results.map((blob, index) => ({
-            blob,
-            filename: results.length === 1
-                ? `${baseFilename}.pdf`
-                : `${baseFilename}_Part_${index + 1}.pdf`,
-        }));
+        );
     };
 
     const [file, setFile] = useState(null);
@@ -756,7 +635,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
             return;
         }
 
-        if (typeof window.html2pdf !== 'function') {
+        if (!isPdfRuntimeReady()) {
             setError('PDF library not fully loaded. Please wait a moment and try again.');
             return;
         }
@@ -773,21 +652,13 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
             });
             const dateSuffix = new Date().toISOString().split('T')[0];
 
-            if (mergedAllEntries.length === 1) {
-                triggerBlobDownload(mergedAllEntries[0].blob, mergedAllEntries[0].filename);
-            } else {
-                if (!window.JSZip) {
-                    throw new Error('ZIP library not fully loaded. Please wait a moment and try again.');
-                }
-
-                const mergedZipBlob = await buildSimpleZipBlob(mergedAllEntries);
-                triggerBlobDownload(mergedZipBlob, `Merged_PDF_${dateSuffix}.zip`);
-            }
+            const mergedZipBlob = await buildZipBlob(mergedAllEntries);
+            triggerBlobDownload(mergedZipBlob, `Merged_PDF_${dateSuffix}.zip`);
 
             showToast(
                 mergedAllEntries.length > 1
                     ? `Downloaded one ZIP with ${mergedAllEntries.length} merged PDF parts for ${invoiceDocuments.length} invoices.`
-                    : `Downloaded merged PDF for ${invoiceDocuments.length} invoices.`,
+                    : `Downloaded one ZIP with the merged PDF for ${invoiceDocuments.length} invoices.`,
                 'success'
             );
         } catch (err) {
@@ -807,7 +678,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
             return;
         }
 
-        if (!window.JSZip || typeof window.html2pdf !== 'function') {
+        if (!window.JSZip || !isPdfRuntimeReady()) {
             setError('PDF or ZIP library not fully loaded. Please wait a moment and try again.');
             return;
         }
@@ -890,22 +761,18 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 setZipProgress(88 + Math.round(((index + 1) / Math.max(merchantEntriesList.length, 1)) * 7));
             }
 
-            const zipPartBlobs = await generateZipPartBlobs(zipEntries);
             const dateSuffix = new Date().toISOString().split('T')[0];
-
-            zipPartBlobs.forEach((zipBlob, index) => {
-                const isMultipart = zipPartBlobs.length > 1;
-                const filename = isMultipart
-                    ? `Invoices_PDF_${dateSuffix}_Part_${index + 1}.zip`
-                    : `Invoices_PDF_${dateSuffix}.zip`;
-                triggerBlobDownload(zipBlob, filename);
-            });
+            const zipBlob = await buildZipBlob(
+                zipEntries.map((entry) => ({
+                    filename: entry.path,
+                    blob: entry.blob,
+                }))
+            );
+            triggerBlobDownload(zipBlob, `Invoices_PDF_${dateSuffix}.zip`);
 
             setZipProgress(100);
             showToast(
-                zipPartBlobs.length > 1
-                    ? `Created ${zipPartBlobs.length} ZIP parts under 5 MB each for ${totalRows} invoices.`
-                    : `Successfully created ZIP file with ${totalRows} PDF invoices and merged merchant files!`,
+                `Successfully created one ZIP file with ${totalRows} PDF invoices and merged files.`,
                 'success'
             );
         } catch (err) {

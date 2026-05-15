@@ -11,13 +11,13 @@ const A4_PAGE_HEIGHT_PX = Math.round(A4_HEIGHT_MM * MM_TO_PX);
 export const MAX_OPTIMIZED_OUTPUT_BYTES = 5 * 1024 * 1024;
 const MIN_SINGLE_ARTIFACT_BYTES = 160 * 1024;
 const PDF_RENDER_PROFILES = [
-    { scale: 4, imageType: 'jpeg', imageQuality: 0.98 },
-    { scale: 3.5, imageType: 'jpeg', imageQuality: 0.95 },
-    { scale: 3, imageType: 'jpeg', imageQuality: 0.92 },
-    { scale: 2.5, imageType: 'jpeg', imageQuality: 0.88 },
-    { scale: 2.1, imageType: 'jpeg', imageQuality: 0.84 },
-    { scale: 1.8, imageType: 'jpeg', imageQuality: 0.8 },
-    { scale: 1.5, imageType: 'jpeg', imageQuality: 0.76 },
+    { scale: 3.2, imageType: 'png' },
+    { scale: 2.8, imageType: 'png' },
+    { scale: 2.4, imageType: 'png' },
+    { scale: 2.1, imageType: 'png' },
+    { scale: 1.8, imageType: 'png' },
+    { scale: 1.5, imageType: 'png' },
+    { scale: 1.2, imageType: 'png' },
 ];
 const PAGE_ROOT_SELECTORS = [
     '.invoice-wrapper',
@@ -269,7 +269,7 @@ export const preparePdfSourceElement = async (element) => {
 
 export const getInvoicePdfOptions = (renderProfile = PDF_RENDER_PROFILES[0]) => ({
     margin: [0, 0, 0, 0],
-    image: { type: renderProfile.imageType, quality: renderProfile.imageQuality },
+    image: { type: renderProfile.imageType, quality: 1 },
     html2canvas: {
         scale: renderProfile.scale,
         logging: false,
@@ -296,6 +296,31 @@ export const getInvoicePdfOptions = (renderProfile = PDF_RENDER_PROFILES[0]) => 
         avoid: [],
     },
 });
+
+export const isPdfRuntimeReady = () => (
+    typeof window !== 'undefined'
+    && typeof window.html2pdf === 'function'
+);
+
+const canvasToBlob = async (canvas, mimeType = 'image/png') => (
+    new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                reject(new Error('Failed to create invoice image.'));
+                return;
+            }
+
+            resolve(blob);
+        }, mimeType);
+    })
+);
+
+const renderInvoicePngFromHtml = async (htmlContent, renderProfile = PDF_RENDER_PROFILES[0]) => {
+    const canvas = await renderInvoiceCanvasFromHtml(htmlContent, renderProfile);
+    return {
+        dataUrl: canvas.toDataURL('image/png'),
+    };
+};
 
 const renderInvoiceCanvasFromHtml = async (htmlContent, renderProfile = PDF_RENDER_PROFILES[0]) => {
     if (typeof window.html2pdf !== 'function') {
@@ -367,9 +392,7 @@ const buildPdfBlobFromHtml = async (htmlContent, renderProfile) => {
     let tempContainer;
     try {
         ({ worker, tempContainer } = await createPdfWorkerFromHtml(htmlContent, renderProfile));
-
-        return await worker
-            .output('blob');
+        return await worker.output('blob');
     } finally {
         if (tempContainer && document.body.contains(tempContainer)) {
             document.body.removeChild(tempContainer);
@@ -385,12 +408,11 @@ const buildMergedPdfBlobFromHtmlList = async (pages, renderProfile) => {
         const pageHeight = pdf.internal.pageSize.getHeight();
 
         for (let index = 1; index < pages.length; index += 1) {
-            const canvas = await renderInvoiceCanvasFromHtml(pages[index], renderProfile);
+            const { dataUrl } = await renderInvoicePngFromHtml(pages[index], renderProfile);
             pdf.addPage();
-
             pdf.addImage(
-                canvas.toDataURL(`image/${renderProfile.imageType}`, renderProfile.imageQuality),
-                renderProfile.imageType.toUpperCase(),
+                dataUrl,
+                'PNG',
                 0,
                 0,
                 pageWidth,
@@ -480,6 +502,67 @@ export const generateMergedPdfBlobFromHtmlList = async (htmlContents, options = 
             label: options.label || 'Merged PDF',
         }
     );
+};
+
+export const generateSplitMergedPdfEntriesFromHtmlList = async (htmlContents, {
+    baseFilename = 'Merged_All',
+    label = 'Merged PDF',
+    maxBytes = MAX_OPTIMIZED_OUTPUT_BYTES,
+} = {}) => {
+    const pages = Array.isArray(htmlContents)
+        ? htmlContents.filter((content) => Boolean(String(content || '').trim()))
+        : [];
+
+    if (pages.length === 0) {
+        throw new Error('No invoice pages available to merge.');
+    }
+
+    const blobs = [];
+    const processChunk = async (chunkPages) => {
+        try {
+            const mergedBlob = await generateMergedPdfBlobFromHtmlList(chunkPages, {
+                maxBytes,
+                label,
+            });
+            blobs.push(mergedBlob);
+        } catch (error) {
+            if (error?.code === 'PDF_SIZE_LIMIT_EXCEEDED' && chunkPages.length > 1) {
+                const midPoint = Math.ceil(chunkPages.length / 2);
+                await processChunk(chunkPages.slice(0, midPoint));
+                await processChunk(chunkPages.slice(midPoint));
+                return;
+            }
+
+            throw error;
+        }
+    };
+
+    await processChunk(pages);
+
+    return blobs.map((blob, index) => ({
+        blob,
+        filename: blobs.length === 1
+            ? `${baseFilename}.pdf`
+            : `${baseFilename}_Part_${index + 1}.pdf`,
+    }));
+};
+
+export const buildZipBlob = async (files, options = {}) => {
+    if (!window?.JSZip) {
+        throw new Error('ZIP library not fully loaded. Please wait a moment and try again.');
+    }
+
+    const zip = new window.JSZip();
+    files.forEach((file) => {
+        zip.file(file.filename || file.path, file.blob);
+    });
+
+    return zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 9 },
+        ...options,
+    });
 };
 
 export const triggerBlobDownload = (blob, filename) => {
