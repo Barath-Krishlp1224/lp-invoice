@@ -12,6 +12,7 @@ import { getMerchantCatalog, getMerchantConfigByKey, getMerchantKeyFromName } fr
 import PrintSelectionModal from '../../file-processing/components/PrintSelectionModal';
 
 export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' }) {
+    const FAST_MERGED_DOWNLOAD_MAX_BYTES = MAX_OPTIMIZED_OUTPUT_BYTES * 3;
     const getZipArtifactBudget = (artifactCount) => {
         const reservedZipOverhead = 512 * 1024;
         const usableBytes = Math.max(256 * 1024, MAX_OPTIMIZED_OUTPUT_BYTES - reservedZipOverhead);
@@ -20,13 +21,16 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
     const generateMergedPdfEntries = async (documents, {
         baseFilename,
         label,
+        maxBytes = MAX_OPTIMIZED_OUTPUT_BYTES,
+        onProgress,
     }) => {
         return generateSplitMergedPdfEntriesFromHtmlList(
             documents.map((entry) => entry.htmlContent),
             {
                 baseFilename,
                 label,
-                maxBytes: MAX_OPTIMIZED_OUTPUT_BYTES,
+                maxBytes,
+                onProgress,
             }
         );
     };
@@ -41,6 +45,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
     const [isDownloadingMerged, setIsDownloadingMerged] = useState(false);
     const [isViewingInTabs, setIsViewingInTabs] = useState(false);
     const [zipProgress, setZipProgress] = useState(0);
+    const [mergedProgress, setMergedProgress] = useState(0);
+    const [mergedProgressMessage, setMergedProgressMessage] = useState('');
     const [activePdfRowIndex, setActivePdfRowIndex] = useState<number | null>(null);
     const [activePdfFilename, setActivePdfFilename] = useState('');
     const [isPrinting, setIsPrinting] = useState(false);
@@ -48,6 +54,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
     const [customerNameColumn, setCustomerNameColumn] = useState('');
     const [selectedMerchantFilters, setSelectedMerchantFilters] = useState([]);
     const [isMerchantFilterOpen, setIsMerchantFilterOpen] = useState(false);
+    const [merchantFilterSearch, setMerchantFilterSearch] = useState('');
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [printSelectionMode, setPrintSelectionMode] = useState('all');
     const [selectedPrintMerchants, setSelectedPrintMerchants] = useState([]);
@@ -91,6 +98,10 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
             )
         ).sort((a, b) => a.localeCompare(b))
         : [];
+
+    const filteredMerchantOptions = availableMerchantNames.filter((merchantName) =>
+        merchantName.toLowerCase().includes(merchantFilterSearch.trim().toLowerCase())
+    );
 
     const filteredPreviewRows = preview ? preview.data.filter((row) => {
         if (!merchantColumn || selectedMerchantFilters.length === 0) {
@@ -641,18 +652,67 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         }
 
         setIsDownloadingMerged(true);
+        setMergedProgress(5);
+        setMergedProgressMessage('Preparing invoice documents...');
         setActivePdfFilename('Merged_All.pdf');
         setError(null);
 
         try {
             const invoiceDocuments = filteredPreviewRows.map((rowData) => getInvoiceDocument(rowData));
+            setMergedProgress(12);
+            setMergedProgressMessage(`Merging ${invoiceDocuments.length} invoice${invoiceDocuments.length > 1 ? 's' : ''}...`);
             const mergedAllEntries = await generateMergedPdfEntries(invoiceDocuments, {
                 baseFilename: 'Merged_All',
                 label: 'Merged all PDF',
+                maxBytes: FAST_MERGED_DOWNLOAD_MAX_BYTES,
+                onProgress: ({ stage, percent, completedPages, totalPages, attempt, totalAttempts, status }) => {
+                    if (stage === 'optimizing') {
+                        if ((attempt || 1) === 1 && status === 'rendering' && (!completedPages || completedPages === 0)) {
+                            setMergedProgress((previous) => Math.max(previous, 14));
+                            setMergedProgressMessage('Rendering first merged PDF pass...');
+                            return;
+                        }
+
+                        const optimizationPercent = Math.max(75, Math.min(84, 75 + Math.round(((attempt || 1) / Math.max(totalAttempts || 1, 1)) * 9)));
+                        setMergedProgress((previous) => Math.max(previous, optimizationPercent));
+
+                        if (status === 'accepted') {
+                            setMergedProgressMessage('Optimized merged PDF successfully...');
+                        } else {
+                            setMergedProgressMessage(`Optimizing merged PDF quality... attempt ${attempt || 1} of ${totalAttempts || 1}`);
+                        }
+                        return;
+                    }
+
+                    const normalizedPercent = Math.max(12, Math.min(74, 12 + Math.round((percent / 100) * 62)));
+                    setMergedProgress((previous) => Math.max(previous, normalizedPercent));
+                    setMergedProgressMessage(`Merged ${Math.min(completedPages, totalPages)} of ${totalPages} invoice pages...`);
+                },
             });
             const dateSuffix = new Date().toISOString().split('T')[0];
 
-            const mergedZipBlob = await buildZipBlob(mergedAllEntries);
+            if (mergedAllEntries.length === 1) {
+                setMergedProgress(100);
+                setMergedProgressMessage('Download is ready.');
+                triggerBlobDownload(mergedAllEntries[0].blob, `Merged_PDF_${dateSuffix}.pdf`);
+                showToast(`Downloaded merged PDF for ${invoiceDocuments.length} invoices.`, 'success');
+                return;
+            }
+
+            setMergedProgress((previous) => Math.max(previous, 85));
+            setMergedProgressMessage(`Creating ZIP file with ${mergedAllEntries.length} parts...`);
+
+            const mergedZipBlob = await buildZipBlob(mergedAllEntries, {
+                compression: 'STORE',
+                onProgress: (metadata) => {
+                    const zipPercent = Number(metadata?.percent) || 0;
+                    const normalizedPercent = Math.max(85, Math.min(99, 85 + Math.round((zipPercent / 100) * 14)));
+                    setMergedProgress((previous) => Math.max(previous, normalizedPercent));
+                    setMergedProgressMessage('Packaging merged PDF parts for download...');
+                },
+            });
+            setMergedProgress(100);
+            setMergedProgressMessage('Download is ready.');
             triggerBlobDownload(mergedZipBlob, `Merged_PDF_${dateSuffix}.zip`);
 
             showToast(
@@ -666,6 +726,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
             setError('Error creating merged PDF: ' + err.message);
         } finally {
             setIsDownloadingMerged(false);
+            setMergedProgress(0);
+            setMergedProgressMessage('');
             setActivePdfFilename('');
         }
     };
@@ -693,6 +755,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
             const merchantTrackers = new Map();
             const merchantGroups = new Map();
             const zipEntries = [];
+            const commonTracker = createUniqueFilenameTracker();
 
             invoiceDocuments.forEach((document) => {
                 const merchantKey = document.merchantLabel;
@@ -721,6 +784,10 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 const merchantFolderPath = sanitizePdfPathSegment(invoiceDocument.merchantLabel, 'Merchant');
                 zipEntries.push({
                     path: `${merchantFolderPath}/${invoiceDocument.uniqueFilename}.pdf`,
+                    blob: pdfBlob,
+                });
+                zipEntries.push({
+                    path: `common/${getUniquePdfBasename(invoiceDocument.filename, commonTracker)}.pdf`,
                     blob: pdfBlob,
                 });
                 setZipProgress(Math.round(((i + 1) / totalRows) * 80));
@@ -1370,7 +1437,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             {isDownloadingMerged ? (
                                                 <>
                                                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                                                    Creating merged PDF...
+                                                    {`Creating merged PDF... ${mergedProgress}%`}
                                                 </>
                                             ) : (
                                                 <>
@@ -1423,26 +1490,42 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             </button>
                                             {isMerchantFilterOpen && (
                                                 <div className="absolute left-0 top-full z-20 mt-2 w-full rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
-                                                    <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                                    <div className="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                                                        <Search className="h-4 w-4 text-gray-400" />
                                                         <input
-                                                            type="checkbox"
-                                                            checked={selectedMerchantFilters.length === 0}
-                                                            onChange={() => handleMerchantFilterToggle('')}
-                                                            className="h-4 w-4 text-green-600"
+                                                            type="text"
+                                                            value={merchantFilterSearch}
+                                                            onChange={(e) => setMerchantFilterSearch(e.target.value)}
+                                                            placeholder="Search merchants..."
+                                                            className="w-full bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-400"
                                                         />
-                                                        <span>All Merchants</span>
-                                                    </label>
-                                                    {availableMerchantNames.map((merchantName) => (
-                                                        <label key={merchantName} className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                                    </div>
+                                                    <div className="max-h-64 overflow-y-auto overscroll-contain pr-1">
+                                                        <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                                             <input
                                                                 type="checkbox"
-                                                                checked={selectedMerchantFilters.includes(merchantName)}
-                                                                onChange={() => handleMerchantFilterToggle(merchantName)}
+                                                                checked={selectedMerchantFilters.length === 0}
+                                                                onChange={() => handleMerchantFilterToggle('')}
                                                                 className="h-4 w-4 text-green-600"
                                                             />
-                                                            <span>{merchantName}</span>
+                                                            <span>All Merchants</span>
                                                         </label>
-                                                    ))}
+                                                        {filteredMerchantOptions.length > 0 ? (
+                                                            filteredMerchantOptions.map((merchantName) => (
+                                                                <label key={merchantName} className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={selectedMerchantFilters.includes(merchantName)}
+                                                                        onChange={() => handleMerchantFilterToggle(merchantName)}
+                                                                        className="h-4 w-4 text-green-600"
+                                                                    />
+                                                                    <span>{merchantName}</span>
+                                                                </label>
+                                                            ))
+                                                        ) : (
+                                                            <div className="px-2 py-3 text-sm text-gray-500">No merchants found</div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -1607,17 +1690,19 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                         {generatingZip
                                             ? 'Please wait while all invoices are rendered.'
                                             : isDownloadingMerged
-                                                ? 'Please wait while the merged invoice PDF is generated.'
-                                            : isPrinting
+                                                ? (mergedProgressMessage || 'Please wait while the merged invoice PDF is generated.')
+                                                : isPrinting
                                                 ? 'Please wait while the merged PDF is generated for printing.'
                                                 : `Preparing ${activePdfFilename || 'invoice.pdf'} for download.`}
                                     </p>
                                 </div>
                                 <div className="flex items-center justify-center gap-3">
                                     <div className="flex-1 max-w-md bg-gray-200 rounded-full h-2">
-                                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${generatingZip ? zipProgress : 100}%` }}></div>
+                                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${generatingZip ? zipProgress : isDownloadingMerged ? mergedProgress : 100}%` }}></div>
                                     </div>
-                                    <div className="text-sm font-semibold text-gray-900 min-w-[3rem]">{generatingZip ? `${zipProgress}%` : '...'}</div>
+                                    <div className="text-sm font-semibold text-gray-900 min-w-[3rem]">
+                                        {generatingZip ? `${zipProgress}%` : isDownloadingMerged ? `${mergedProgress}%` : '...'}
+                                    </div>
                                 </div>
                             </div>
                         )}

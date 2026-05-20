@@ -400,12 +400,14 @@ const buildPdfBlobFromHtml = async (htmlContent, renderProfile) => {
     }
 };
 
-const buildMergedPdfBlobFromHtmlList = async (pages, renderProfile) => {
+const buildMergedPdfBlobFromHtmlList = async (pages, renderProfile, options = {}) => {
     const { worker, pdf, tempContainer } = await createPdfWorkerFromHtml(pages[0], renderProfile);
+    const onPageProgress = typeof options.onPageProgress === 'function' ? options.onPageProgress : null;
 
     try {
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
+        onPageProgress?.(1, pages.length);
 
         for (let index = 1; index < pages.length; index += 1) {
             const { dataUrl } = await renderInvoicePngFromHtml(pages[index], renderProfile);
@@ -420,6 +422,7 @@ const buildMergedPdfBlobFromHtmlList = async (pages, renderProfile) => {
                 undefined,
                 'FAST'
             );
+            onPageProgress?.(index + 1, pages.length);
 
             if (index % 3 === 0) {
                 await waitForNextFrame();
@@ -438,19 +441,40 @@ const generateOptimizedPdfBlob = async (producer, {
     maxBytes = MAX_OPTIMIZED_OUTPUT_BYTES,
     pageCount = 1,
     label = 'PDF export',
+    onAttemptProgress,
 } = {}) => {
     const safeMaxBytes = Math.max(MIN_SINGLE_ARTIFACT_BYTES, Number(maxBytes) || MAX_OPTIMIZED_OUTPUT_BYTES);
     const startingIndex = getRecommendedProfileIndex(pageCount, safeMaxBytes);
+    const totalAttempts = Math.max(1, PDF_RENDER_PROFILES.length - startingIndex);
     let smallestBlob = null;
     let smallestSize = Number.POSITIVE_INFINITY;
     let lastError = null;
 
     for (let profileIndex = startingIndex; profileIndex < PDF_RENDER_PROFILES.length; profileIndex += 1) {
         const renderProfile = PDF_RENDER_PROFILES[profileIndex];
+        const attemptNumber = (profileIndex - startingIndex) + 1;
+
+        onAttemptProgress?.({
+            stage: 'optimizing',
+            status: 'rendering',
+            attempt: attemptNumber,
+            totalAttempts,
+            renderScale: renderProfile.scale,
+        });
 
         try {
             const blob = await producer(renderProfile);
             const blobSize = blob?.size || 0;
+
+            onAttemptProgress?.({
+                stage: 'optimizing',
+                status: blobSize <= safeMaxBytes ? 'accepted' : 'retrying',
+                attempt: attemptNumber,
+                totalAttempts,
+                renderScale: renderProfile.scale,
+                blobSize,
+                maxBytes: safeMaxBytes,
+            });
 
             if (blobSize < smallestSize) {
                 smallestBlob = blob;
@@ -462,6 +486,14 @@ const generateOptimizedPdfBlob = async (producer, {
             }
         } catch (error) {
             lastError = error;
+            onAttemptProgress?.({
+                stage: 'optimizing',
+                status: 'retrying',
+                attempt: attemptNumber,
+                totalAttempts,
+                renderScale: renderProfile.scale,
+                error: error?.message || 'Optimization retry',
+            });
         }
 
         await waitForNextFrame();
@@ -495,11 +527,14 @@ export const generateMergedPdfBlobFromHtmlList = async (htmlContents, options = 
     }
 
     return generateOptimizedPdfBlob(
-        (renderProfile) => buildMergedPdfBlobFromHtmlList(pages, renderProfile),
+        (renderProfile) => buildMergedPdfBlobFromHtmlList(pages, renderProfile, {
+            onPageProgress: options.onPageProgress,
+        }),
         {
             maxBytes: options.maxBytes,
             pageCount: pages.length,
             label: options.label || 'Merged PDF',
+            onAttemptProgress: options.onOptimizationProgress,
         }
     );
 };
@@ -508,6 +543,7 @@ export const generateSplitMergedPdfEntriesFromHtmlList = async (htmlContents, {
     baseFilename = 'Merged_All',
     label = 'Merged PDF',
     maxBytes = MAX_OPTIMIZED_OUTPUT_BYTES,
+    onProgress,
 } = {}) => {
     const pages = Array.isArray(htmlContents)
         ? htmlContents.filter((content) => Boolean(String(content || '').trim()))
@@ -518,13 +554,43 @@ export const generateSplitMergedPdfEntriesFromHtmlList = async (htmlContents, {
     }
 
     const blobs = [];
+    let processedPages = 0;
+    const totalPages = pages.length;
+    const emitProgress = (completedPages) => {
+        if (typeof onProgress !== 'function') {
+            return;
+        }
+
+        const boundedCompletedPages = Math.max(0, Math.min(totalPages, completedPages));
+        onProgress({
+            stage: 'merge',
+            completedPages: boundedCompletedPages,
+            totalPages,
+            percent: totalPages > 0 ? Math.round((boundedCompletedPages / totalPages) * 100) : 0,
+        });
+    };
+
     const processChunk = async (chunkPages) => {
         try {
             const mergedBlob = await generateMergedPdfBlobFromHtmlList(chunkPages, {
                 maxBytes,
                 label,
+                onPageProgress: (completedChunkPages) => {
+                    emitProgress(processedPages + completedChunkPages);
+                },
+                onOptimizationProgress: (optimizationMeta) => {
+                    onProgress?.({
+                        ...optimizationMeta,
+                        stage: 'optimizing',
+                        completedPages: processedPages,
+                        totalPages,
+                        chunkPages: chunkPages.length,
+                    });
+                },
             });
             blobs.push(mergedBlob);
+            processedPages += chunkPages.length;
+            emitProgress(processedPages);
         } catch (error) {
             if (error?.code === 'PDF_SIZE_LIMIT_EXCEEDED' && chunkPages.length > 1) {
                 const midPoint = Math.ceil(chunkPages.length / 2);
@@ -552,6 +618,7 @@ export const buildZipBlob = async (files, options = {}) => {
         throw new Error('ZIP library not fully loaded. Please wait a moment and try again.');
     }
 
+    const { onProgress, ...zipOptions } = options;
     const zip = new window.JSZip();
     files.forEach((file) => {
         zip.file(file.filename || file.path, file.blob);
@@ -561,8 +628,8 @@ export const buildZipBlob = async (files, options = {}) => {
         type: 'blob',
         compression: 'DEFLATE',
         compressionOptions: { level: 9 },
-        ...options,
-    });
+        ...zipOptions,
+    }, typeof onProgress === 'function' ? onProgress : undefined);
 };
 
 export const triggerBlobDownload = (blob, filename) => {
