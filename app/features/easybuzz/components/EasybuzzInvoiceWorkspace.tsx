@@ -352,7 +352,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         if (!rrnColumn || !rowData[rrnColumn]) {
             return `${rowData._rowIndex}`;
         }
-        const rrnValue = String(rowData[rrnColumn]);
+        const rrnValue = formatRrnValue(formatCellValue(rowData[rrnColumn], rrnColumn));
         const cleanFilename = rrnValue.replace(/[^a-zA-Z0-9_-]/g, '_');
         return `${cleanFilename}` || `${rowData._rowIndex}`;
     };

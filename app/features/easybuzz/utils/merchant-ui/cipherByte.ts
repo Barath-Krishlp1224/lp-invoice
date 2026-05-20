@@ -232,6 +232,7 @@ export const renderCipherByteInvoiceHTML = ({
             color: #111827;
         }
         .grid-footer-label {
+            grid-column: 1 / 4;
             padding: 4mm 2.5mm;
             font-size: 11px;
             font-weight: 800;
@@ -463,9 +464,7 @@ export const renderCipherByteInvoiceHTML = ({
                     </div>
                     <div class="grid-footer">
                         <div class="grid-footer-label">Total</div>
-                        <div class="grid-footer-value"></div>
-                        <div class="grid-footer-value"></div>
-                        <div class="grid-footer-value">0</div>
+                        <div class="grid-footer-value">${formatCurrency(formattedAmount)}</div>
                         <div class="grid-footer-value">0</div>
                         <div class="grid-footer-value">${formatCurrency(formattedAmount)}</div>
                     </div>

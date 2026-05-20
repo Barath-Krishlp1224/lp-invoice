@@ -548,8 +548,8 @@ export const renderGenericMerchantInvoiceHTML = (
                                 <td>₹ ${formattedAmount}</td>
                             </tr>
                             <tr>
-                                <td colspan="${totalColspan}" style="font-weight: 900; text-align: right;">Total</td>
-                                ${merchantKey === "apextech" ? "" : `<td>₹ ${formattedAmount}</td>`}
+                                <td colspan="3" style="font-weight: 900; text-align: right;">Total</td>
+                                <td>₹ ${formattedAmount}</td>
                                 <td>${taxValue}</td>
                                 <td>₹ ${formattedAmount}</td>
                             </tr>

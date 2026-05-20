@@ -36,6 +36,37 @@ const formatDateTimeParts = (year, month, day, hours, minutes, seconds) => {
     return `${datePart} ${pad2(hours)}:${pad2(minutes)}:${pad2(seconds ?? 0)}`;
 };
 
+const normalizeTimeWithMeridiem = (value) => {
+    const trimmed = String(value || "").trim();
+
+    if (!trimmed || trimmed === "-") {
+        return "-";
+    }
+
+    if (/\b(am|pm)\b/i.test(trimmed)) {
+        return trimmed.toUpperCase().replace(/\s+/g, " ");
+    }
+
+    const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+
+    if (!match) {
+        return trimmed;
+    }
+
+    const hours24 = Number(match[1]);
+    const minutes = match[2];
+    const seconds = match[3];
+
+    if (!Number.isInteger(hours24) || hours24 < 0 || hours24 > 23) {
+        return trimmed;
+    }
+
+    const meridiem = hours24 >= 12 ? "PM" : "AM";
+    const hours12 = hours24 % 12 || 12;
+
+    return `${pad2(hours12)}:${minutes}${seconds ? `:${seconds}` : ""} ${meridiem}`;
+};
+
 const splitTransactionDateTime = (value) => {
     const trimmed = String(value || "").trim();
     const match = trimmed.match(/^(\d{2}[\/-]\d{2}[\/-]\d{4})(?:\s+(.+))?$/);
@@ -49,7 +80,7 @@ const splitTransactionDateTime = (value) => {
     }
 
     const normalizedDate = match[1].replace(/-/g, "/");
-    const timeOnly = match[2]?.trim() || "-";
+    const timeOnly = normalizeTimeWithMeridiem(match[2]?.trim() || "-");
 
     return {
         dateOnly: normalizedDate,
@@ -675,8 +706,8 @@ const renderTableSection = (design, descriptionText, formattedAmount, merchantIn
                         <td>₹ ${formattedAmount}</td>
                     </tr>
                     <tr class="table-total">
-                        <td colspan="${merchantInfo?.key === "apextech" ? "4" : "3"}" style="font-weight: 900;">Total</td>
-                        ${merchantInfo?.key === "apextech" ? "" : `<td>₹ ${formattedAmount}</td>`}
+                        <td colspan="3" style="font-weight: 900;">Total</td>
+                        <td>₹ ${formattedAmount}</td>
                         <td>${merchantInfo?.key === "apextech" ? "-" : "₹ 0.00"}</td>
                         <td>₹ ${formattedAmount}</td>
                     </tr>

@@ -394,7 +394,8 @@ export const renderApextechInvoiceHTML = ({
                             <td>₹ ${formattedAmount}</td>
                         </tr>
                         <tr>
-                            <td colspan="4" style="text-align: center;">Total</td>
+                            <td colspan="3" style="text-align: center;">Total</td>
+                            <td>₹ ${formattedAmount}</td>
                             <td>-</td>
                             <td>₹ ${formattedAmount}</td>
                         </tr>

@@ -305,10 +305,11 @@ export const renderByteBlissInvoiceHTML = ({
         }
 
         .tbl-total-label {
-            grid-column: 1 / 5;
+            grid-column: 1 / 4;
             text-align: center;
         }
 
+        .tbl-gross,
         .tbl-tax,
         .tbl-net {
             text-align: center;
@@ -546,6 +547,7 @@ export const renderByteBlissInvoiceHTML = ({
                     </div>
                     <div class="tbl-total-row">
                         <span class="tbl-total-label">Total</span>
+                        <span class="tbl-gross">₹${displayAmount}</span>
                         <span class="tbl-tax">-</span>
                         <span class="tbl-net">₹${displayAmount}</span>
                     </div>

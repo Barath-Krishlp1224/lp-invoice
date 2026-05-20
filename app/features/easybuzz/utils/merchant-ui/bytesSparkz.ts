@@ -143,7 +143,7 @@ export const renderBytesSparkzInvoiceHTML = ({
                         </tr>
                         <tr>
                             <td colspan="3" style="text-align: center; font-weight: 800;">Total</td>
-                            <td>0</td>
+                            <td>₹ ${formattedAmount}</td>
                             <td>0</td>
                             <td>₹ ${formattedAmount}</td>
                         </tr>

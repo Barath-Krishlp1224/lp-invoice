@@ -72,30 +72,6 @@ export const renderVoltiqInvoiceHTML = ({
             box-shadow: 0 8px 40px rgba(0,0,0,.1);
         }
 
-        .ds1 {
-            position: absolute;
-            width: 64px;
-            height: 64px;
-            background: #c8a97a;
-            border-radius: 6px;
-            top: -18px;
-            right: 64px;
-            transform: rotate(20deg);
-            opacity: .85;
-        }
-
-        .ds2 {
-            position: absolute;
-            width: 42px;
-            height: 42px;
-            background: #c8a97a;
-            border-radius: 6px;
-            bottom: 18px;
-            right: -16px;
-            transform: rotate(35deg);
-            opacity: .75;
-        }
-
         .hdr {
             display: flex;
             justify-content: space-between;
@@ -583,8 +559,6 @@ export const renderVoltiqInvoiceHTML = ({
                 min-height: 297mm;
             }
 
-            .ds1,
-            .ds2,
             .hrgt,
             .divider-v,
             .ic-icon,
@@ -624,9 +598,6 @@ export const renderVoltiqInvoiceHTML = ({
 <body>
     <div class="inv">
         <div class="pg">
-            <div class="ds1"></div>
-            <div class="ds2"></div>
-
             <div class="hdr">
                 <div class="logo">
                     <img class="logo-mark" src="${merchantInfo.logoPath}" alt="${escapeHtml(merchantInfo.displayName)} logo" />
@@ -724,8 +695,8 @@ export const renderVoltiqInvoiceHTML = ({
                             <td class="nc">${amountDisplay}</td>
                         </tr>
                         <tr class="totrow">
-                            <td colspan="3"></td>
-                            <td class="tlbl">Total</td>
+                            <td colspan="3" class="tlbl">Total</td>
+                            <td>${amountDisplay}</td>
                             <td>${taxDisplay}</td>
                             <td class="nc">${amountDisplay}</td>
                         </tr>
