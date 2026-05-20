@@ -46,7 +46,7 @@ livenessProbe:
   periodSeconds: 10
 
 apisix:
-  classname: apisix-demo
+  ingressClassName: apisix-demo
   hosts:
     - invoice-uat.lemonpay.in # here we need add IP for testing purpose only 
   paths:
