@@ -1,4 +1,4 @@
-import { escapeHtml } from "./shared";
+import { escapeHtml, formatRrnValue } from "./shared";
 import type { MerchantInvoiceRenderContext } from "./types";
 
 const formatCurrency = (formattedAmount: string) => `₹ ${formattedAmount}`;
@@ -30,7 +30,7 @@ export const renderCipherByteInvoiceHTML = ({
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(rrnValue)}</title>
+    <title>${escapeHtml(formatRrnValue(rrnValue))}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -418,7 +418,7 @@ export const renderCipherByteInvoiceHTML = ({
                 </div>
                 <div class="top-meta-text">
                     <div class="top-meta-row"><strong>Invoice Number:</strong><span>${escapeHtml(invoiceNumberToDisplay)}</span></div>
-                    <div class="top-meta-row"><strong>RRN Number:</strong><span>${escapeHtml(rrnValue)}</span></div>
+                    <div class="top-meta-row"><strong>RRN Number:</strong><span>${escapeHtml(formatRrnValue(rrnValue))}</span></div>
                 </div>
             </div>
 

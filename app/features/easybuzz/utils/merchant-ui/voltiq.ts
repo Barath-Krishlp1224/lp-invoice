@@ -1,4 +1,4 @@
-import { escapeHtml } from "./shared";
+import { escapeHtml, formatRrnValue } from "./shared";
 import type { MerchantInvoiceRenderContext } from "./types";
 
 const getInitials = (value: string) =>
@@ -42,7 +42,7 @@ export const renderVoltiqInvoiceHTML = ({
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(rrnValue)}</title>
+    <title>${escapeHtml(formatRrnValue(rrnValue))}</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap');
 
@@ -640,7 +640,7 @@ export const renderVoltiqInvoiceHTML = ({
                         </div>
                         <div class="mi">
                             <span class="ml">RRN Number</span>
-                            <span class="mv">${escapeHtml(rrnValue)}</span>
+                            <span class="mv">${escapeHtml(formatRrnValue(rrnValue))}</span>
                         </div>
                     </div>
                 </div>

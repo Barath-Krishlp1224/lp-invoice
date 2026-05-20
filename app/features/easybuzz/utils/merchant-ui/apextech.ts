@@ -1,4 +1,4 @@
-import { escapeHtml } from "./shared";
+import { escapeHtml, formatRrnValue } from "./shared";
 import type { MerchantInvoiceRenderContext } from "./types";
 
 export const renderApextechInvoiceHTML = ({
@@ -14,7 +14,7 @@ export const renderApextechInvoiceHTML = ({
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(rrnValue)}</title>
+    <title>${escapeHtml(formatRrnValue(rrnValue))}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -324,7 +324,7 @@ export const renderApextechInvoiceHTML = ({
                     </div>
                     <div class="meta-box">
                         <div class="meta-label">RRN Number</div>
-                        <div class="meta-value">${escapeHtml(rrnValue)}</div>
+                        <div class="meta-value">${escapeHtml(formatRrnValue(rrnValue))}</div>
                     </div>
                 </div>
             </section>

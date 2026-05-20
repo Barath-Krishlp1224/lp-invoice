@@ -6,6 +6,7 @@ import { Upload, FileText, Download, CheckCircle, AlertCircle, Building2, Hash, 
 import { APP_ASSETS } from '../../../constants/assets';
 import useInvoiceDataProcessing from '../../file-processing/hooks/useInvoiceDataProcessing';
 import { generateProfessionalInvoiceHTML, formatCellValue } from '../utils/easybuzzInvoiceTemplate'; 
+import { formatRrnValue } from '../utils/merchant-ui/shared';
 import { detectRequiredColumns as detectPreviewColumns } from '../../file-processing/utils/columnDetection';
 import { MAX_OPTIMIZED_OUTPUT_BYTES, buildZipBlob, createUniqueFilenameTracker, generateImageBlobFromHtml, generateMergedPdfBlobFromHtmlList, generatePdfBlobFromHtml, generateSplitMergedPdfEntriesFromHtmlList, getUniquePdfBasename, isPdfRuntimeReady, openPdfBlobPreview, triggerBlobDownload } from '../../file-processing/utils/pdfGeneration';
 import { getMerchantCatalog, getMerchantConfigByKey, getMerchantKeyFromName } from '../utils/merchantConfigs';
@@ -354,6 +355,14 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         const rrnValue = String(rowData[rrnColumn]);
         const cleanFilename = rrnValue.replace(/[^a-zA-Z0-9_-]/g, '_');
         return `${cleanFilename}` || `${rowData._rowIndex}`;
+    };
+
+    const getDisplayRrnValue = (rowData) => {
+        if (!rrnColumn || !rowData[rrnColumn]) {
+            return `${rowData._rowIndex}`;
+        }
+
+        return formatRrnValue(formatCellValue(rowData[rrnColumn], rrnColumn));
     };
 
     const getCurrentInvoiceDatePrefix = () => {
@@ -1586,7 +1595,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                                                 </td>
                                                             )}
                                                             {rrnColumn && (
-                                                                <td className="px-4 py-2 text-xs text-gray-700">{getFilenameFromRRN(row)}.pdf</td>
+                                                                <td className="px-4 py-2 text-xs text-gray-700">{getDisplayRrnValue(row)}</td>
                                                             )}
                                                             {merchantColumn && (
                                                                 <td className="px-4 py-2 text-xs text-gray-700">

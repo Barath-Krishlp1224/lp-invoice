@@ -61,7 +61,7 @@ const MERCHANT_CONFIGS = {
             displayName: 'BYTEBLISS',
             companyName: 'BYTEBLISS SOFTWARE SOLUTIONS PRIVATE LIMITED',
             invoiceCode: '78',
-            address: 'NO 15, 2 CRS, POONGAVANAM GARDEN, MANAVELY, ARIYANKUPPAM, PONDICHERRY - 605007<br/>GST: 34AAMCB6861D1ZN',
+            address: 'NO 15, II CROSS, POONGAVANAM GARDEN, VEERAMPATTINAM, PONDICHERRY - 605007, PONDICHERRY.<br/>GST: 34AAMCB6861D1ZN',
             receiptEntityName: 'BBLP',
             logoPath: '/assets/merchants/Byte Bliss.png',
             themeColor: '#0f4c5c',

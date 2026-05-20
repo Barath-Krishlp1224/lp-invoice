@@ -1,5 +1,19 @@
-import { escapeHtml } from "./shared";
+import { escapeHtml, formatRrnValue } from "./shared";
 import type { MerchantInvoiceRenderContext } from "./types";
+
+const splitAddressAndGst = (addressHtml: string) => {
+    const parts = String(addressHtml || "")
+        .split(/<br\/?>/i)
+        .map((part) => part.trim())
+        .filter(Boolean);
+    const gstLine = parts.find((part) => /^(gst|gstin)\s*:?\s*/i.test(part)) || "";
+    const addressLines = parts.filter((part) => part !== gstLine);
+
+    return {
+        addressHtml: addressLines.join("<br/>"),
+        gstText: gstLine.replace(/^(gst|gstin)\s*:?\s*/i, "").trim(),
+    };
+};
 
 export const renderByteEvolveInvoiceHTML = ({
     merchantInfo,
@@ -9,157 +23,177 @@ export const renderByteEvolveInvoiceHTML = ({
     receiptEntityName,
     descriptionText,
     fields,
-}: MerchantInvoiceRenderContext) => `<!DOCTYPE html>
+}: MerchantInvoiceRenderContext) => {
+    const { addressHtml, gstText } = splitAddressAndGst(merchantInfo.address || fields.addressHtml);
+
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(rrnValue)}</title>
+    <title>${escapeHtml(formatRrnValue(rrnValue))}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { margin: 0; background: #d8d8d8; color: #3f3f46; font-family: "Segoe UI", Arial, sans-serif; }
-        .page { width: 100%; max-width: 210mm; margin: 0 auto; min-height: 297mm; padding: 0; }
-        .invoice { position: relative; min-height: 297mm; background: #ffffff; overflow: hidden; box-shadow: 0 14px 40px rgba(17, 24, 39, 0.18); padding: 14mm 12mm 12mm; }
-        .invoice::before { content: ""; position: absolute; inset: 0; background: linear-gradient(132deg, transparent 0 38%, rgba(244, 232, 232, 0.85) 38%, rgba(244, 232, 232, 0.85) 62%, transparent 62%); pointer-events: none; }
-        .top-meta, .summary-wrap, .footer, table, .hero { position: relative; z-index: 1; }
-        .top-meta { display: flex; justify-content: flex-end; margin-bottom: 12mm; font-size: 10px; color: #6b7280; line-height: 1.7; text-align: right; }
-        .hero { margin-bottom: 10mm; }
-        .invoice-title { display: inline-block; background: linear-gradient(90deg, #ef7b6f, #d64e48); color: #ffffff; font-size: 25px; font-weight: 300; letter-spacing: 0.05em; padding: 2mm 10mm 2mm 5mm; margin-bottom: 7mm; }
-        .invoice-title strong, .thanks strong { font-weight: 800; color: #ffffff; }
-        .bill-grid { display: grid; grid-template-columns: 1fr 0.95fr; gap: 12mm; align-items: start; }
-        .bill-to h3, .summary h3, .meta-block h3, .payments h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #991b1b; margin-bottom: 3mm; }
-        .bill-to p, .meta-block p, .payments p { font-size: 10.5px; line-height: 1.75; color: #52525b; }
-        .logo { width: 34mm; max-height: 18mm; object-fit: contain; object-position: left center; margin-bottom: 4mm; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 10mm; }
-        thead th { background: #b91c1c; color: #ffffff; padding: 3.4mm 3mm; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; text-align: left; }
-        tbody td { border-bottom: 1px solid #e5e7eb; padding: 3.6mm 3mm; font-size: 10.5px; color: #52525b; }
-        tbody tr:last-child td { border-bottom: 1px solid #d4d4d8; }
-        .summary-wrap { display: grid; grid-template-columns: 1fr 0.82fr; gap: 12mm; margin-bottom: 10mm; }
-        .meta-block { align-self: end; }
-        .summary { justify-self: end; width: 100%; max-width: 72mm; }
-        .summary-line { display: flex; justify-content: space-between; gap: 4mm; font-size: 11px; color: #3f3f46; padding: 1.8mm 0; }
-        .summary-line.total { margin-top: 1mm; font-size: 14px; font-weight: 800; color: #18181b; }
-        .amount-due { margin-top: 4mm; background: #b91c1c; color: #ffffff; display: flex; justify-content: space-between; gap: 4mm; padding: 3.6mm 4mm; font-size: 12px; font-weight: 800; }
-        .footer { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 12mm; align-items: end; margin-top: 10mm; }
-        .payments ul { margin-top: 3mm; padding-left: 4mm; color: #52525b; font-size: 10.5px; line-height: 1.8; }
-        .thanks { justify-self: end; align-self: end; background: linear-gradient(90deg, #ef7b6f, #d64e48); color: #ffffff; font-size: 22px; font-weight: 300; letter-spacing: 0.05em; padding: 2mm 7mm 2mm 5mm; }
+        body { background: #ebebeb; font-family: "Segoe UI", Arial, sans-serif; color: #1c1c1e; }
+        .page { width: 100%; max-width: 210mm; margin: 0 auto; min-height: 297mm; }
+        .inv { background: #ffffff; min-height: 297mm; box-shadow: 0 4px 20px rgba(0,0,0,0.10); display: flex; flex-direction: column; }
+
+        /* ── HEADER ── */
+        .hdr {  padding: 10mm 12mm; display: flex; align-items: flex-start; justify-content: space-between; border-bottom-left-radius: 18mm; border-bottom-right-radius: 18mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .hdr-brand { display: flex; align-items: center; }
+        .logo-img { width: 88mm; max-height: 18mm; object-fit: contain; object-position: left center; }
+        .hdr-inv { text-align: right; }
+        .hdr-inv .tag { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: #a9bbdf; margin-bottom: 1.5mm; }
+        .hdr-inv .num { display: block; font-size: 13px; font-weight: 700; color: #000000ff; line-height: 1.2; }
+        .hdr-inv .meta-line { margin-top: 3mm; }
+        .hdr-inv .meta-label { display: block; font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #727272ff; margin-bottom: 1mm; }
+        .hdr-inv .meta-value { display: block; font-size: 13px; font-weight: 700; color: #000000ff; line-height: 1.2; }
+
+        /* ── INFO ROW ── */
+        .info-row { width: calc(100% - 18mm); margin: 0 auto 4mm; background: #0f1b33; border: 1px solid #e5e7eb; border-radius: 18px 18px 24px 10px; overflow: hidden; }
+        .info-company { padding: 5mm 7mm 4mm; text-align: center; border-bottom: 1px solid rgba(229, 231, 235, 0.28); }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; }
+        .ir-cell { padding: 5mm 7mm; text-align: center; border-right: 1px solid #e5e7eb; }
+        .ir-cell:last-child { border-right: none; }
+        .ir-label { font-size: 9px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #b8c7e6; margin-bottom: 2mm; }
+        .ir-val { font-size: 12px; font-weight: 600; color: #f8fbff; }
+        .ir-sub { font-size: 10.5px; color: #d7e0f0; margin-top: 1mm; line-height: 1.6; }
+        .ir-company-name { font-size: 15px; font-weight: 800; color: #ffffff; margin-bottom: 1.5mm; }
+        .ir-gst { font-size: 10.5px; font-weight: 700; color: #c8d6f2; margin-top: 1.5mm; }
+
+        /* ── BILL ROW ── */
+        .bill-row { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid #e5e7eb; }
+        .br-cell { padding: 6mm 7mm; border-right: 1px solid #e5e7eb; }
+        .br-cell:last-child { border-right: none; }
+        .br-label { font-size: 9px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #0f1b33; margin-bottom: 3mm; }
+        .br-name { font-size: 12.5px; font-weight: 700; color: #111827; margin-bottom: 1.5mm; }
+        .br-line { font-size: 10.5px; color: #6b7280; line-height: 1.85; }
+        .br-line b { color: #374151; font-weight: 600; }
+
+        /* ── TABLE ── */
+        .tbl-wrap { width: calc(100% - 24mm); margin: 0 auto 4mm; padding: 6mm 7mm; background: #ffffff; flex: 1; }
+        .tbl-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3mm; }
+        .tbl-title { font-size: 9px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #9ca3af; }
+        .item-count { font-size: 10.5px; color: #6b7280; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        thead tr { border-bottom: 2px solid #0f1b33; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        thead th { font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #0f1b33; padding: 3mm 3mm; text-align: center; }
+        tbody td { font-size: 11px; color: #374151; padding: 3mm 3mm; border-bottom: 1px solid #f3f4f6; vertical-align: middle; text-align: center; }
+        tbody td.amt { font-family: "Courier New", monospace; color: #111827; }
+        tbody tr.total-row td { font-weight: 700; background: #f9fafb; }
+        tbody tr:last-child td { border-bottom: none; }
+
+        /* ── BOTTOM: payments + summary ── */
+        .btm { width: calc(100% - 18mm); margin: 0 auto 5mm; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 24px 10px 18px 18px; padding: 6mm 7mm; }
+        .btm-note { max-width: 145mm; margin: 0 auto; text-align: left; }
+        .btm-note-title { font-size: 9px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #9ca3af; margin-bottom: 2.5mm; }
+        .btm-note-list { margin: 0; padding-left: 4.5mm; font-size: 10.5px; color: #6b7280; line-height: 1.7; }
+        .btm-note-list li + li { margin-top: 1.5mm; }
+
+        /* ── FOOTER ── */
+        .ftr { background: #0f1b33; padding: 4mm 7mm; display: flex; justify-content: space-between; align-items: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .ftr-l { font-size: 10px; color: #d7e0f0; }
+        .ftr-c { font-size: 9.5px; color: #a9bbdf; font-family: "Courier New", monospace; }
+        .ftr-r { font-size: 12px; font-weight: 800; color: #f0fdfa; letter-spacing: 0.05em; }
+
         @media print {
             body { background: #ffffff; }
-            .invoice { box-shadow: none; }
-            .invoice::before, .invoice-title, .amount-due, .thanks, thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .inv { box-shadow: none; }
+            .hdr, .ftr, .amt-block, .status-pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             @page { size: A4 portrait; margin: 0; }
         }
     </style>
 </head>
 <body>
     <div class="page">
-        <div class="invoice">
-            <div class="top-meta">
-                <div>
-                    ${escapeHtml(merchantInfo.companyName)}<br/>
-                    ${fields.addressHtml}
+        <div class="inv">
+
+            <!-- HEADER -->
+            <div class="hdr">
+                <div class="hdr-brand">
+                    <img class="logo-img" src="${merchantInfo.logoPath}" alt="${escapeHtml(merchantInfo.displayName)} logo" />
+                </div>
+                <div class="hdr-inv">
+                    <div class="meta-line">
+                        <span class="meta-label">Invoice No</span>
+                        <span class="num">${escapeHtml(invoiceNumberToDisplay)}</span>
+                    </div>
+                    <div class="meta-line">
+                        <span class="meta-label">RRN No</span>
+                        <span class="meta-value">${escapeHtml(formatRrnValue(rrnValue))}</span>
+                    </div>
                 </div>
             </div>
-            <section class="hero">
-                <div class="invoice-title">INVOICE<strong>#${escapeHtml(invoiceNumberToDisplay)}</strong></div>
-                <div class="bill-grid">
-                    <div class="bill-to">
-                        <h3>To</h3>
-                        <img class="logo" src="${merchantInfo.logoPath}" alt="${escapeHtml(merchantInfo.displayName)} logo" />
-                        <p>
-                            <strong>${fields.customerName}</strong><br/>
-                            UPI ID: ${fields.upiId}<br/>
-                            Transaction Date: ${fields.transactionDate}<br/>
-                            Reference No: ${escapeHtml(rrnValue)}
-                        </p>
+
+            <!-- INFO ROW -->
+            <div class="info-row">
+                <div class="info-company">
+                    <div class="ir-label">Company details</div>
+                    <div class="ir-company-name">${escapeHtml(merchantInfo.companyName)}</div>
+                    <div class="ir-sub">${addressHtml}</div>
+                    ${gstText ? `<div class="ir-gst">GST: ${escapeHtml(gstText)}</div>` : ""}
+                </div>
+                <div class="info-grid">
+                    <div class="ir-cell">
+                        <div class="ir-label">Customer details</div>
+                        <div class="ir-val">${fields.customerName}</div>
+                        <div class="ir-sub">UPI ID: ${fields.upiId}</div>
                     </div>
-                    <div class="meta-block">
-                        <h3>Invoice From</h3>
-                        <p>
-                            ${escapeHtml(merchantInfo.companyName)}<br/>
-                            ${fields.addressHtml}<br/>
-                            Received by ${escapeHtml(receiptEntityName)}
-                        </p>
+                    <div class="ir-cell">
+                        <div class="ir-label">Transaction date &amp; time</div>
+                        <div class="ir-val">${fields.transactionDateOnly}</div>
+                        <div class="ir-sub">${fields.transactionTimeOnly}</div>
                     </div>
                 </div>
-            </section>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 7%;">Item</th>
-                        <th style="width: 39%;">Description</th>
-                        <th style="width: 12%;">Qty</th>
-                        <th style="width: 14%;">Price</th>
-                        <th style="width: 12%;">Discount</th>
-                        <th style="width: 8%;">Tax</th>
-                        <th style="width: 18%;">Ln. Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td>${escapeHtml(descriptionText)}</td>
-                        <td>1</td>
-                        <td>₹ ${formattedAmount}</td>
-                        <td>0%</td>
-                        <td>0%</td>
-                        <td>₹ ${formattedAmount}</td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>Settlement reference ${escapeHtml(rrnValue)}</td>
-                        <td>1</td>
-                        <td>₹ 0.00</td>
-                        <td>0%</td>
-                        <td>0%</td>
-                        <td>₹ 0.00</td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td>Invoice record ${escapeHtml(invoiceNumberToDisplay)}</td>
-                        <td>1</td>
-                        <td>₹ 0.00</td>
-                        <td>0%</td>
-                        <td>0%</td>
-                        <td>₹ 0.00</td>
-                    </tr>
-                </tbody>
-            </table>
-            <section class="summary-wrap">
-                <div class="meta-block">
-                    <h3>Issued Details</h3>
-                    <p>
-                        Issued on: ${fields.transactionDate}<br/>
-                        Due on: ${fields.transactionDate}<br/>
-                        Currency: INR<br/>
-                        P.O. #: ${escapeHtml(rrnValue)}<br/>
-                        Ref: ${escapeHtml(invoiceNumberToDisplay)}
-                    </p>
-                </div>
-                <div class="summary">
-                    <h3>Summary</h3>
-                    <div class="summary-line"><span>Subtotal</span><strong>₹ ${formattedAmount}</strong></div>
-                    <div class="summary-line"><span>Tax 1</span><strong>₹ 0.00</strong></div>
-                    <div class="summary-line"><span>Tax 2</span><strong>₹ 0.00</strong></div>
-                    <div class="summary-line total"><span>Total</span><strong>₹ ${formattedAmount}</strong></div>
-                    <div class="summary-line"><span>Paid</span><strong>₹ 0.00</strong></div>
-                    <div class="amount-due"><span>Amount Due:</span><span>₹ ${formattedAmount}</span></div>
-                </div>
-            </section>
-            <section class="footer">
-                <div class="payments">
-                    <h3>Payment Details</h3>
-                    <p>Thank you very much. We really appreciate your business. Please send payments before the due date.</p>
-                    <ul>
-                        <li>Reference: ${escapeHtml(rrnValue)}</li>
-                        <li>Beneficiary: ${escapeHtml(receiptEntityName)}</li>
-                        <li>Merchant: ${escapeHtml(merchantInfo.displayName)}</li>
+            </div>
+
+            <!-- TABLE -->
+            <div class="tbl-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:36%">Description</th>
+                            <th style="width:8%">Qty</th>
+                            <th style="width:14%">Unit price</th>
+                            <th style="width:14%">Gross amount</th>
+                            <th style="width:10%">Tax</th>
+                            <th style="width:18%">Net amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${escapeHtml(descriptionText)}</td>
+                            <td>1</td>
+                            <td class="amt">₹ ${formattedAmount}</td>
+                            <td class="amt">₹ ${formattedAmount}</td>
+                            <td>0</td>
+                            <td class="amt">₹ ${formattedAmount}</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="3">Total</td>
+                            <td class="amt">₹ ${formattedAmount}</td>
+                            <td>0</td>
+                            <td class="amt">₹ ${formattedAmount}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- BOTTOM -->
+            <div class="btm">
+                <div class="btm-note">
+                    <div class="btm-note-title">Terms &amp; Conditions</div>
+                    <ul class="btm-note-list">
+                        <li>By receiving this receipt, the user confirms that the applicable fees were paid to ${escapeHtml(receiptEntityName || merchantInfo.displayName)} through the payment gateway and accepts the company's terms related to this transaction.</li>
+                        <li>This receipt is issued against the UPI ID through which the payment was collected and verified.</li>
+                        <li>This is a computer-generated receipt and does not require a physical seal or signature for validation.</li>
                     </ul>
                 </div>
-                <div class="thanks">THANKS<strong>!</strong></div>
-            </section>
+            </div>
+
+         
         </div>
     </div>
 </body>
 </html>`;
-
+};

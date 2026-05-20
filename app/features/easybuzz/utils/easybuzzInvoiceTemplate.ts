@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { getMerchantConfig } from "./merchantConfigs";
-import { renderGenericMerchantInvoiceHTML } from "./merchant-ui/shared";
+import { formatRrnValue, renderGenericMerchantInvoiceHTML } from "./merchant-ui/shared";
 import { merchantUiRegistry } from "./merchant-ui/registry";
 
 const pad2 = (value) => String(value).padStart(2, "0");
@@ -392,7 +392,7 @@ const renderHeader = (design, merchantInfo, invoiceNumber, rrnValue) => {
             </div>
             <div class="meta-card">
                 <div class="meta-label">RRN Number</div>
-                <div class="meta-value meta-code">${escapeHtml(rrnValue)}</div>
+                <div class="meta-value meta-code">${escapeHtml(formatRrnValue(rrnValue))}</div>
             </div>
         </div>
     `;
@@ -582,7 +582,7 @@ const renderInfoSection = (design, fields, merchantInfo) => {
         `
         : `
                 <div class="data-row"><span>Date</span><strong class="value-multiline">${fields.transactionDateHtml}</strong></div>
-                <div class="data-row"><span>RRN Number</span><strong>${fields.rrnValue}</strong></div>
+                <div class="data-row"><span>RRN Number</span><strong>${escapeHtml(formatRrnValue(fields.rrnValue))}</strong></div>
         `;
 
     const transactionCard = `
@@ -739,7 +739,7 @@ const renderByteBlissInvoiceHTML = ({
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(rrnValue)}</title>
+    <title>${escapeHtml(formatRrnValue(rrnValue))}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -1006,7 +1006,7 @@ const renderByteBlissInvoiceHTML = ({
                     </div>
                     <div class="invoice-meta">
                         <div class="meta-line"><strong>Invoice No:</strong> ${escapeHtml(invoiceNumberToDisplay)}</div>
-                        <div class="meta-line"><strong>RRN No:</strong> ${escapeHtml(rrnValue)}</div>
+                        <div class="meta-line"><strong>RRN No:</strong> ${escapeHtml(formatRrnValue(rrnValue))}</div>
                     </div>
                 </section>
 
@@ -1089,7 +1089,7 @@ const renderByteBlissInvoiceHTML = ({
                         <tr>
                             <td>${escapeHtml(descriptionText)}</td>
                             <td>${fields.transactionDate}</td>
-                            <td>${escapeHtml(rrnValue)}</td>
+                            <td>${escapeHtml(formatRrnValue(rrnValue))}</td>
                             <td>₹ ${formattedAmount}</td>
                         </tr>
                     </tbody>
@@ -1113,7 +1113,7 @@ const renderByteEvolveInvoiceHTML = ({
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(rrnValue)}</title>
+    <title>${escapeHtml(formatRrnValue(rrnValue))}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -1340,7 +1340,7 @@ const renderByteEvolveInvoiceHTML = ({
                             <strong>${fields.customerName}</strong><br/>
                             UPI ID: ${fields.upiId}<br/>
                             Transaction Date: ${fields.transactionDate}<br/>
-                            Reference No: ${escapeHtml(rrnValue)}
+                            Reference No: ${escapeHtml(formatRrnValue(rrnValue))}
                         </p>
                     </div>
                     <div class="meta-block">
@@ -1378,7 +1378,7 @@ const renderByteEvolveInvoiceHTML = ({
                     </tr>
                     <tr>
                         <td>2</td>
-                        <td>Settlement reference ${escapeHtml(rrnValue)}</td>
+                        <td>Settlement reference ${escapeHtml(formatRrnValue(rrnValue))}</td>
                         <td>1</td>
                         <td>₹ 0.00</td>
                         <td>0%</td>
@@ -1404,7 +1404,7 @@ const renderByteEvolveInvoiceHTML = ({
                         Issued on: ${fields.transactionDate}<br/>
                         Due on: ${fields.transactionDate}<br/>
                         Currency: INR<br/>
-                        P.O. #: ${escapeHtml(rrnValue)}<br/>
+                        P.O. #: ${escapeHtml(formatRrnValue(rrnValue))}<br/>
                         Ref: ${escapeHtml(invoiceNumberToDisplay)}
                     </p>
                 </div>
@@ -1424,7 +1424,7 @@ const renderByteEvolveInvoiceHTML = ({
                     <h3>Payment Details</h3>
                     <p>Thank you very much. We really appreciate your business. Please send payments before the due date.</p>
                     <ul>
-                        <li>Reference: ${escapeHtml(rrnValue)}</li>
+                        <li>Reference: ${escapeHtml(formatRrnValue(rrnValue))}</li>
                         <li>Beneficiary: ${escapeHtml(receiptEntityName)}</li>
                         <li>Merchant: ${escapeHtml(merchantInfo.displayName)}</li>
                     </ul>
@@ -1449,7 +1449,7 @@ const renderByteSparkzInvoiceHTML = ({
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(rrnValue)}</title>
+    <title>${escapeHtml(formatRrnValue(rrnValue))}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -1759,7 +1759,7 @@ const renderByteSparkzInvoiceHTML = ({
                         <h3>Invoice to</h3>
                         <strong>${fields.customerName}</strong>
                         <p>UPI ID: ${fields.upiId}</p>
-                        <p>Reference No: ${escapeHtml(rrnValue)}</p>
+                        <p>Reference No: ${escapeHtml(formatRrnValue(rrnValue))}</p>
                     </div>
                     <div class="dates">
                         <div class="date-box">
@@ -1795,7 +1795,7 @@ const renderByteSparkzInvoiceHTML = ({
                         </tr>
                         <tr>
                             <td>2.</td>
-                            <td class="desc">Settlement reference ${escapeHtml(rrnValue)}</td>
+                            <td class="desc">Settlement reference ${escapeHtml(formatRrnValue(rrnValue))}</td>
                             <td>₹ 0.00</td>
                             <td>1</td>
                             <td>₹ 0.00</td>
@@ -1824,7 +1824,7 @@ const renderByteSparkzInvoiceHTML = ({
                     <div class="info-card">
                         <h3>Payment Method</h3>
                         <p>
-                            Account No : ${escapeHtml(rrnValue)}<br/>
+                            Account No : ${escapeHtml(formatRrnValue(rrnValue))}<br/>
                             Account Name : ${escapeHtml(receiptEntityName)}<br/>
                             Bank Name : UPI Settlement
                         </p>
@@ -1889,7 +1889,7 @@ export const generateProfessionalInvoiceHTML = (
     const customerNameValue = customerNameColumn && rowData[customerNameColumn]
         ? formatCellValue(rowData[customerNameColumn], customerNameColumn)
         : "N/A";
-    const rrnValue = rrnColumn && rowData[rrnColumn] ? formatCellValue(rowData[rrnColumn], rrnColumn) : "N/A";
+    const rrnValue = rrnColumn && rowData[rrnColumn] ? formatRrnValue(formatCellValue(rowData[rrnColumn], rrnColumn)) : "N/A";
     const receiptEntityName = merchantInfo.receiptEntityName || merchantInfo.companyName;
     const descriptionText = workspaceMode === "others"
         ? "Services rendered and goals delivered successfully"
@@ -1910,7 +1910,7 @@ export const generateProfessionalInvoiceHTML = (
         transactionDateOnly,
         transactionTimeOnly,
         transactionDateHtml,
-        rrnValue: escapeHtml(rrnValue),
+        rrnValue: escapeHtml(formatRrnValue(rrnValue)),
     };
 
     const renderContext = {
@@ -1972,7 +1972,7 @@ export const generateProfessionalInvoiceHTML = (
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(rrnValue)}</title>
+    <title>${escapeHtml(formatRrnValue(rrnValue))}</title>
     <style>
         * {
             margin: 0;
@@ -3030,7 +3030,7 @@ export const generateProfessionalInvoiceHTML = (
 <body>
     <div class="page">
         <div class="invoice">
-            ${renderHeader(design, merchantInfo, escapeHtml(invoiceNumberToDisplay), escapeHtml(rrnValue))}
+            ${renderHeader(design, merchantInfo, escapeHtml(invoiceNumberToDisplay), formatRrnValue(rrnValue))}
             ${renderInfoSection(design, fields, merchantInfo)}
             ${renderTableSection(design, descriptionText, formattedAmount, merchantInfo)}
             ${renderSummarySection(design, formattedAmount, merchantInfo)}

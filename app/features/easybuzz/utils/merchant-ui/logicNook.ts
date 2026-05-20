@@ -1,4 +1,4 @@
-import { escapeHtml } from "./shared";
+import { escapeHtml, formatRrnValue } from "./shared";
 import type { MerchantInvoiceRenderContext } from "./types";
 
 export const renderLogicNookInvoiceHTML = ({
@@ -14,7 +14,7 @@ export const renderLogicNookInvoiceHTML = ({
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(rrnValue)}</title>
+    <title>${escapeHtml(formatRrnValue(rrnValue))}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -453,7 +453,7 @@ export const renderLogicNookInvoiceHTML = ({
                 </div>
                 <div class="hm-row">
                     <div class="hm-label">RRN :</div>
-                    <div class="hm-value">${escapeHtml(rrnValue)}</div>
+                    <div class="hm-value">${escapeHtml(formatRrnValue(rrnValue))}</div>
                 </div>
             </div>
         </div>

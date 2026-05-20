@@ -20,6 +20,16 @@ export const escapeHtml = (value: unknown) => String(value ?? "")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
+export const formatRrnValue = (value: unknown) => {
+    const normalized = String(value ?? "").trim();
+
+    if (!/^\d+$/.test(normalized)) {
+        return normalized;
+    }
+
+    return normalized.length >= 12 ? normalized : normalized.padStart(12, "0");
+};
+
 const merchantDesigns: Record<string, any> = {
     sparkleap: {
         accent: "#1f4b99",
@@ -162,7 +172,7 @@ export const renderGenericMerchantInvoiceHTML = (
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(rrnValue)}</title>
+    <title>${escapeHtml(formatRrnValue(rrnValue))}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -481,7 +491,7 @@ export const renderGenericMerchantInvoiceHTML = (
                         </div>
                         <div class="meta-card">
                             <div class="meta-label">RRN Number</div>
-                            <div class="meta-value">${escapeHtml(rrnValue)}</div>
+                            <div class="meta-value">${escapeHtml(formatRrnValue(rrnValue))}</div>
                         </div>
                     </div>
                 </div>
@@ -509,7 +519,7 @@ export const renderGenericMerchantInvoiceHTML = (
                                 `
                                 : `
                             <div class="detail-line"><span>Date</span><strong>${fields.transactionDate}</strong></div>
-                            <div class="detail-line"><span>RRN Number</span><strong>${fields.rrnValue}</strong></div>
+                            <div class="detail-line"><span>RRN Number</span><strong>${escapeHtml(formatRrnValue(fields.rrnValue))}</strong></div>
                                 `}
                         </div>
                     </div>
@@ -578,7 +588,7 @@ export const renderGenericMerchantInvoiceHTML = (
                             <tr>
                                 <td class="align-left">${escapeHtml(descriptionText)}</td>
                                 <td>${fields.transactionDate}</td>
-                                <td>${escapeHtml(rrnValue)}</td>
+                                <td>${escapeHtml(formatRrnValue(rrnValue))}</td>
                                 <td>₹ ${formattedAmount}</td>
                             </tr>
                         </tbody>

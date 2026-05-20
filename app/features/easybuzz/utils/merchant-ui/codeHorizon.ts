@@ -1,4 +1,4 @@
-import { escapeHtml } from "./shared";
+import { escapeHtml, formatRrnValue } from "./shared";
 import type { MerchantInvoiceRenderContext } from "./types";
 
 const normalizeCurrencyValue = (value: unknown): number | null => {
@@ -51,7 +51,7 @@ export const renderCodeHorizonInvoiceHTML = ({
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(rrnValue)}</title>
+    <title>${escapeHtml(formatRrnValue(rrnValue))}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -201,10 +201,14 @@ export const renderCodeHorizonInvoiceHTML = ({
             font-weight: 600;
             text-align: center;
         }
-        .transaction-row span:last-child {
+        .transaction-value {
             color: #1f2937;
             font-weight: 700;
             text-align: left;
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.5;
         }
 
         /* Table Section */
@@ -419,7 +423,7 @@ export const renderCodeHorizonInvoiceHTML = ({
                         </div>
                         <div class="meta-row">
                             <span class="meta-label">RRN Number:</span>
-                            <span class="meta-value">${escapeHtml(rrnValue)}</span>
+                            <span class="meta-value">${escapeHtml(formatRrnValue(rrnValue))}</span>
                         </div>
                     </div>
                 </div>
@@ -441,22 +445,22 @@ export const renderCodeHorizonInvoiceHTML = ({
                         <div class="transaction-row">
                             <span>Customer Name</span>
                             <span class="transaction-colon">:</span>
-                            <span>${fields.customerName}</span>
+                            <span class="transaction-value">${fields.customerName}</span>
                         </div>
                         <div class="transaction-row">
                             <span>UPI ID</span>
                             <span class="transaction-colon">:</span>
-                            <span>${fields.upiId}</span>
+                            <span class="transaction-value">${fields.upiId}</span>
                         </div>
                         <div class="transaction-row">
                             <span>Transaction Date</span>
                             <span class="transaction-colon">:</span>
-                            <span>${fields.transactionDateOnly}</span>
+                            <span class="transaction-value">${fields.transactionDateOnly}</span>
                         </div>
                         <div class="transaction-row">
                             <span>Transaction Time</span>
                             <span class="transaction-colon">:</span>
-                            <span>${fields.transactionTimeOnly}</span>
+                            <span class="transaction-value">${fields.transactionTimeOnly}</span>
                         </div>
                     </div>
                 </div>
