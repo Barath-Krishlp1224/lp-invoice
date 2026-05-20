@@ -40,15 +40,16 @@ export const renderCipherByteInvoiceHTML = ({
             font-family: "Segoe UI", Arial, sans-serif;
         }
         .page {
-            width: 210mm;
+            width: 100%;
+            max-width: 210mm;
             min-height: 297mm;
             margin: 0 auto;
-            padding: 10mm 8mm;
+            padding: 4mm;
         }
         .invoice {
             position: relative;
             width: 100%;
-            min-height: 277mm;
+            min-height: 0;
             background: #ffffff;
             border-radius: 18px;
             overflow: hidden;
@@ -59,7 +60,7 @@ export const renderCipherByteInvoiceHTML = ({
             justify-content: space-between;
             align-items: flex-start;
             gap: 8mm;
-            padding: 8mm 10mm 4mm;
+            padding: 8mm 8mm 4mm;
             font-size: 9px;
             line-height: 1.7;
             color: #6b7280;
@@ -140,8 +141,8 @@ export const renderCipherByteInvoiceHTML = ({
             line-height: 1;
         }
         .summary {
-            padding: 4mm 10mm 8mm;
-            margin-top: 10mm;
+            padding: 4mm 8mm 8mm;
+            margin-top: 6mm;
         }
         .customer-strip {
             display: grid;
@@ -168,8 +169,8 @@ export const renderCipherByteInvoiceHTML = ({
             overflow: hidden;
         }
         .table-wrap {
-            padding: 0 10mm;
-            margin-top: 10mm;
+            padding: 0 8mm;
+            margin-top: 6mm;
         }
         .transaction-grid {
             display: grid;
@@ -268,7 +269,7 @@ export const renderCipherByteInvoiceHTML = ({
         .totals-area {
             display: flex;
             justify-content: flex-end;
-            padding: 8mm 10mm 0;
+            padding: 6mm 8mm 0;
         }
         .totals-box {
             width: 85mm;
@@ -324,9 +325,9 @@ export const renderCipherByteInvoiceHTML = ({
             font-weight: 500;
         }
         .terms {
-            width: calc(100% - 20mm);
-            max-width: 150mm;
-            margin: 38mm auto 0;
+            width: calc(100% - 16mm);
+            max-width: 160mm;
+            margin: 18mm auto 0;
             padding: 5mm 6mm 4mm;
             border: 2px solid #b71c1c;
             border-radius: 14px;
@@ -384,9 +385,10 @@ export const renderCipherByteInvoiceHTML = ({
         @media print {
             body { background: #ffffff; }
             .page {
-                width: 210mm;
+                width: 100%;
+                max-width: 210mm;
                 min-height: 297mm;
-                padding: 10mm 8mm;
+                padding: 4mm;
             }
             .invoice { box-shadow: none; }
             .title-chip,

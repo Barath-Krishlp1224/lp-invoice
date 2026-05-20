@@ -67,15 +67,16 @@ export const renderBytesNapseInvoiceHTML = ({
             font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
         }
         .page {
-            width: 210mm;
+            width: 100%;
+            max-width: 210mm;
             min-height: 297mm;
             margin: 0 auto;
-            padding: 8mm;
+            padding: 6mm;
         }
         .invoice {
             background: #ffffff;
             width: 100%;
-            min-height: 281mm;
+            min-height: 0;
             margin: 0 auto;
             border-radius: 20px;
             overflow: hidden;
@@ -188,7 +189,7 @@ export const renderBytesNapseInvoiceHTML = ({
             word-break: break-all;
         }
         .header-spacer {
-            height: 8mm;
+            height: 4mm;
             background: #ffffff;
         }
         .profile {
@@ -234,39 +235,44 @@ export const renderBytesNapseInvoiceHTML = ({
         }
         .profile-info {
             flex: 1;
-            padding: 6mm 7mm;
+            padding: 5mm 6mm;
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 0;
             background: #ffffff;
         }
         .pinfo-item {
-            padding: 4mm 5mm;
+            min-width: 0;
+            padding: 3.5mm 4mm;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            align-items: center;
+            text-align: center;
             background: transparent;
             border-right: 1px solid #1b4332;
         }
         .pinfo-item:last-child { border-right: none; }
         .pinfo-label {
-            font-size: 7.5px;
+            font-size: 7px;
             text-transform: uppercase;
-            letter-spacing: 1.2px;
+            letter-spacing: 1px;
             color: #2d6a4f;
             font-weight: 600;
-            margin-bottom: 1.2mm;
+            margin-bottom: 1mm;
         }
         .pinfo-value {
-            font-size: 12px;
+            font-size: 10.5px;
             font-weight: 600;
             color: #111111;
             line-height: 1.35;
-            word-break: break-word;
+            word-break: break-all;
+            overflow-wrap: anywhere;
+            text-align: center;
         }
-        .txn-wrap { 
-        margin-top: 15mm;
-        padding: 8mm 10mm 0; }
+        .txn-wrap {
+        margin-top: 6mm;
+        padding: 6mm 10mm 0; }
         .section-head {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
@@ -305,26 +311,27 @@ export const renderBytesNapseInvoiceHTML = ({
         }
         .tbl thead { background: #2d6a4f; }
         .tbl thead th {
-            padding: 3mm 2.5mm;
-            font-size: 7.5px;
+            padding: 2.5mm 2mm;
+            font-size: 7px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 0.6px;
             color: #d8f3dc;
-            text-align: right;
+            text-align: center;
+            white-space: nowrap;
         }
         .tbl thead th:first-child {
-            text-align: left;
-            width: 35%;
+            text-align: center;
+            width: 34%;
         }
-        .tbl thead th:nth-child(2) { width: 7%; }
+        .tbl thead th:nth-child(2) { width: 8%; }
         .tbl thead th:nth-child(3) { width: 14%; }
         .tbl thead th:nth-child(4) { width: 14%; }
         .tbl thead th:nth-child(5) { width: 10%; }
         .tbl tbody tr td {
-            padding: 4mm 2.5mm;
+            padding: 3.5mm 2mm;
             vertical-align: middle;
-            text-align: right;
+            text-align: center;
             border-bottom: 1px solid #e8f5ec;
             color: #1b2a22;
         }
@@ -333,7 +340,7 @@ export const renderBytesNapseInvoiceHTML = ({
         .tbl tbody tr:nth-child(even) { background: #ffffff; }
         .tbl tbody tr.total-row { background: #ffffff; }
         .tbl tbody td:first-child {
-            text-align: left;
+            text-align: center;
             line-height: 1.5;
         }
         .tbl tbody td:last-child {
@@ -342,7 +349,7 @@ export const renderBytesNapseInvoiceHTML = ({
         }
         .dash { color: #a8d5b5; }
         .total-wrap {
-            margin: 6mm 10mm 0;
+            margin: 5mm 10mm 0;
             display: grid;
             grid-template-columns: 1fr 54mm;
             border: 1.5px solid #2d6a4f;
@@ -351,7 +358,7 @@ export const renderBytesNapseInvoiceHTML = ({
             background: #ffffff;
         }
         .total-hero {
-            padding: 6mm 7mm;
+            padding: 5mm 6mm;
             background: #ffffff;
             display: flex;
             flex-direction: column;
@@ -367,7 +374,7 @@ export const renderBytesNapseInvoiceHTML = ({
         }
         .total-number {
             font-family: Georgia, "Times New Roman", serif;
-            font-size: 34px;
+            font-size: 30px;
             font-weight: 900;
             color: #111111;
             line-height: 1;
@@ -385,11 +392,11 @@ export const renderBytesNapseInvoiceHTML = ({
         }
         .total-rows {
             background: #ffffff;
-            padding: 5mm;
+            padding: 4mm;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 3mm;
+            gap: 2mm;
             border-left: 1px solid #2d6a4f;
         }
         .trow {
@@ -398,7 +405,7 @@ export const renderBytesNapseInvoiceHTML = ({
             align-items: center;
             font-size: 10px;
             color: #2d6a4f;
-            padding-bottom: 2mm;
+            padding-bottom: 1.5mm;
             border-bottom: 1px dashed #2d6a4f;
         }
         .trow:last-child {
@@ -417,7 +424,7 @@ export const renderBytesNapseInvoiceHTML = ({
             background: #ffffff;
             border-radius: 10px;
             margin-top: 1mm;
-            padding: 3mm 4mm;
+            padding: 2.5mm 3mm;
             font-size: 10px;
         }
         .trow-net span {
@@ -430,7 +437,7 @@ export const renderBytesNapseInvoiceHTML = ({
             font-weight: 700;
         }
         .terms {
-            margin: 25mm 10mm 10mm;
+            margin: 10mm 10mm 8mm;
             background: #ffffff;
             border: 1.5px solid #e8f5ec;
             border-radius: 12px;
@@ -438,7 +445,7 @@ export const renderBytesNapseInvoiceHTML = ({
         }
         .terms-head {
             background: #2d6a4f;
-            padding: 2.5mm 4mm;
+            padding: 2mm 4mm;
             font-size: 7.5px;
             text-transform: uppercase;
             letter-spacing: 1.5px;
@@ -446,15 +453,15 @@ export const renderBytesNapseInvoiceHTML = ({
             font-weight: 700;
         }
         .terms-body {
-            padding: 4mm;
+            padding: 3.5mm 4mm;
             display: flex;
             flex-direction: column;
-            gap: 2mm;
+            gap: 1.5mm;
         }
         .term {
-            font-size: 9.5px;
+            font-size: 9px;
             color: #2d4a35;
-            line-height: 1.65;
+            line-height: 1.5;
             padding-left: 4mm;
             position: relative;
             font-weight: 400;
@@ -536,9 +543,10 @@ export const renderBytesNapseInvoiceHTML = ({
         @media print {
             body { background: #ffffff; }
             .page {
-                width: 210mm;
+                width: 100%;
+                max-width: 210mm;
                 min-height: 297mm;
-                padding: 8mm;
+                padding: 6mm;
             }
             .invoice { box-shadow: none; }
             .header, .profile, .section-line, .section-badge, .tbl thead, .trow-net, .terms-head, .foot {
@@ -635,7 +643,7 @@ export const renderBytesNapseInvoiceHTML = ({
                         </tr>
                         <tr class="total-row">
                             <td colspan="3" style="text-align: center; font-weight: 700;">Total</td>
-                            <td>0</td>
+                            <td>${formatCurrency(formattedAmount)}</td>
                             <td>0</td>
                             <td>${formatCurrency(formattedAmount)}</td>
                         </tr>

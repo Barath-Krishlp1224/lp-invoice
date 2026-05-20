@@ -32,7 +32,7 @@ const PDF_LAYOUT_OVERRIDES = `
         width: 100% !important;
         min-height: auto !important;
         background: #ffffff !important;
-        overflow: hidden !important;
+        overflow: visible !important;
     }
 
     body > * {
@@ -189,9 +189,9 @@ export const createPdfRenderContainer = () => {
     container.style.opacity = '0';
     container.style.pointerEvents = 'none';
     container.style.width = `${A4_PAGE_WIDTH_PX}px`;
-    container.style.height = `${A4_PAGE_HEIGHT_PX}px`;
+    container.style.minHeight = `${A4_PAGE_HEIGHT_PX}px`;
     container.style.background = '#ffffff';
-    container.style.overflow = 'hidden';
+    container.style.overflow = 'visible';
     container.style.display = 'flex';
     container.style.alignItems = 'flex-start';
     container.style.justifyContent = 'center';
@@ -202,9 +202,9 @@ export const createPdfRenderContainer = () => {
 export const createPdfSourceElement = (htmlContent) => {
     const element = document.createElement('div');
     element.style.width = A4_PAGE_WIDTH;
-    element.style.height = A4_PAGE_HEIGHT;
+    element.style.minHeight = A4_PAGE_HEIGHT;
     element.style.background = '#ffffff';
-    element.style.overflow = 'hidden';
+    element.style.overflow = 'visible';
     element.style.position = 'relative';
     element.style.boxSizing = 'border-box';
     element.style.display = 'flex';
@@ -214,10 +214,10 @@ export const createPdfSourceElement = (htmlContent) => {
 
     const content = document.createElement('div');
     content.style.width = '100%';
-    content.style.height = '100%';
+    content.style.minHeight = '100%';
     content.style.background = '#ffffff';
     content.style.boxSizing = 'border-box';
-    content.style.overflow = 'hidden';
+    content.style.overflow = 'visible';
     content.style.display = 'flex';
     content.style.alignItems = 'flex-start';
     content.style.justifyContent = 'center';
@@ -261,7 +261,7 @@ export const preparePdfSourceElement = async (element) => {
         content.style.height = `${measuredHeight * scale}px`;
     } else {
         pageRoot.style.transform = 'scale(1)';
-        content.style.height = '100%';
+        content.style.height = `${measuredHeight}px`;
     }
 
     await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
