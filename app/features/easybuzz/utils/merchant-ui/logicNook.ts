@@ -198,6 +198,10 @@ export const renderLogicNookInvoiceHTML = ({
             font-size: 9.5pt;
             font-weight: 700;
             color: var(--ink);
+            line-height: 1.35;
+            white-space: normal;
+            word-break: break-all;
+            overflow-wrap: anywhere;
         }
 
         /* ── SECTION HEADING ── */

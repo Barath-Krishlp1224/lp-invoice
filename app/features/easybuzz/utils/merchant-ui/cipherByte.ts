@@ -475,7 +475,7 @@ export const renderCipherByteInvoiceHTML = ({
             <section class="totals-area">
                 <div class="totals-box">
                     <div class="amount-card">
-                        <div class="amount-label">Total Amount Due</div>
+                        <div class="amount-label">Total Amount</div>
                         <div class="amount-value">${formatCurrency(formattedAmount)}</div>
                     </div>
                 </div>

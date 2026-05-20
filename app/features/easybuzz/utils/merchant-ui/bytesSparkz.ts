@@ -19,7 +19,7 @@ export const renderBytesSparkzInvoiceHTML = ({
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { margin: 0; background: #a3a3a3; color: #3f3f46; font-family: "Segoe UI", Arial, sans-serif; }
         .page { width: 100%; max-width: 210mm; min-height: 297mm; margin: 0 auto; }
-        .invoice { position: relative; min-height: 297mm; background: #ffffff; overflow: hidden; box-shadow: 0 18px 44px rgba(15, 23, 42, 0.22); padding: 15mm 12mm 10mm; }
+        .invoice { position: relative; min-height: 297mm; background: #ffffff; overflow: hidden; box-shadow: 0 18px 44px rgba(15, 23, 42, 0.22); padding: 15mm 12mm 10mm; display: flex; flex-direction: column; }
         .invoice::before { content: none; }
 
         .header-strip { position: relative; z-index: 2; display: grid; grid-template-columns: 1fr auto; gap: 5mm; align-items: stretch; margin-bottom: 6mm; }
@@ -48,17 +48,17 @@ export const renderBytesSparkzInvoiceHTML = ({
         .table-card tbody td:first-child { text-align: left; }
         .main-body { position: relative; z-index: 1; padding: 0 7mm; }
         .divider { height: 1px; background: #c3cad3; margin: 4mm 0 6mm; }
-        .summary-area { display: flex; justify-content: flex-end; margin-bottom: 10mm; }
+        .summary-area { display: flex; justify-content: flex-end; margin-bottom: 8mm; }
         .info-card { border: 1px solid #dfe4ec; border-radius: 5mm; padding: 6mm 5mm; background: rgba(255,255,255,0.92); }
         .info-card h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #3f4b73; margin-bottom: 3mm; }
         .info-card p { font-size: 10.5px; line-height: 1.75; color: #52525b; }
         .terms-list { margin-top: 2mm; padding-left: 4mm; }
         .terms-list li { font-size: 12px; line-height: 1.75; color: #52525b; margin-bottom: 2mm; }
         .summary-panel { width: 100%; max-width: 94mm; }
-        .summary-net { display: flex; justify-content: space-between; align-items: center; gap: 4mm; padding: 0 1mm; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 3mm; transform: translateX(-10mm);}
+        .summary-net { display: flex; justify-content: space-between; align-items: center; gap: 4mm; padding: 0 1mm; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 3mm; }
         .summary-net strong { color: #111827; white-space: nowrap; }
         .total-pill { background: linear-gradient(0deg, #9ea7ae 0%, #6f7a86 10%, #2c3e50 100%); color: #ffffff; display: flex; justify-content: space-between; align-items: center; gap: 4mm; padding: 4.2mm 5mm; border-radius: 4mm; font-size: 12px; font-weight: 800; margin-top: 0; white-space: nowrap; }
-        .footer-bar { position: absolute; left: 24mm; right: 24mm; bottom: 54mm; background: linear-gradient(0deg, #9ea7ae 0%, #6f7a86 10%, #2c3e50 100%); color: #ffffff; border: 1px solid #5f6c79; border-radius: 5mm; padding: 5mm 5mm 4mm; }
+        .footer-bar { margin: 0 12mm 0; background: linear-gradient(0deg, #9ea7ae 0%, #6f7a86 10%, #2c3e50 100%); color: #ffffff; border: 1px solid #5f6c79; border-radius: 5mm; padding: 5mm 5mm 4mm; }
         .footer-bar h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: #ffffff; margin-bottom: 3mm; }
         .footer-bar .terms-list { margin-top: 0; padding-left: 0; list-style: none; }
         .footer-bar .terms-list li { position: relative; padding-left: 5mm; color: rgba(255,255,255,0.94); line-height: 1.65; margin-bottom: 1.5mm; }

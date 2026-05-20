@@ -13,6 +13,7 @@ import PrintSelectionModal from '../../file-processing/components/PrintSelection
 
 export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' }) {
     const FAST_MERGED_DOWNLOAD_MAX_BYTES = MAX_OPTIMIZED_OUTPUT_BYTES * 3;
+    const MERGED_PRINT_MAX_BYTES = MAX_OPTIMIZED_OUTPUT_BYTES * 3;
     const getZipArtifactBudget = (artifactCount) => {
         const reservedZipOverhead = 512 * 1024;
         const usableBytes = Math.max(256 * 1024, MAX_OPTIMIZED_OUTPUT_BYTES - reservedZipOverhead);
@@ -955,7 +956,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         try {
             const invoiceDocuments = rowsToPrint.map((row) => getInvoiceDocument(row));
             const mergedPdfBlob = await generateMergedPdfBlobFromHtmlList(invoiceDocuments.map((entry) => entry.htmlContent), {
-                maxBytes: MAX_OPTIMIZED_OUTPUT_BYTES,
+                maxBytes: MERGED_PRINT_MAX_BYTES,
                 label: 'Merged print PDF',
             });
             openPdfBlobPreview(mergedPdfBlob, 'invoice-print-preview');
