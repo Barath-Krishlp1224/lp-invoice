@@ -7,11 +7,16 @@ import { APP_ASSETS } from '../../../constants/assets';
 import useInvoiceDataProcessing from '../../file-processing/hooks/useInvoiceDataProcessing';
 import { generateProfessionalInvoiceHTML, formatCellValue } from '../utils/easybuzzInvoiceTemplate'; 
 import { detectRequiredColumns as detectPreviewColumns } from '../../file-processing/utils/columnDetection';
-import { MAX_OPTIMIZED_OUTPUT_BYTES, buildZipBlob, createUniqueFilenameTracker, generateMergedPdfBlobFromHtmlList, generatePdfBlobFromHtml, generateSplitMergedPdfEntriesFromHtmlList, getUniquePdfBasename, isPdfRuntimeReady, openPdfBlobPreview, sanitizePdfPathSegment, triggerBlobDownload } from '../../file-processing/utils/pdfGeneration';
+import { MAX_OPTIMIZED_OUTPUT_BYTES, buildZipBlob, createUniqueFilenameTracker, generateImageBlobFromHtml, generateMergedPdfBlobFromHtmlList, generatePdfBlobFromHtml, generateSplitMergedPdfEntriesFromHtmlList, getUniquePdfBasename, isPdfRuntimeReady, openPdfBlobPreview, triggerBlobDownload } from '../../file-processing/utils/pdfGeneration';
 import { getMerchantCatalog, getMerchantConfigByKey, getMerchantKeyFromName } from '../utils/merchantConfigs';
 import PrintSelectionModal from '../../file-processing/components/PrintSelectionModal';
 
 export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' }) {
+    const COMMON_FOLDER_FORMAT_OPTIONS = [
+        { value: 'pdf', label: 'PDF', description: 'Keep common folder files as PDF.' },
+        { value: 'png', label: 'PNG', description: 'Download common folder files as PNG images.' },
+        { value: 'jpeg', label: 'JPEG', description: 'Download common folder files as JPEG images.' },
+    ];
     const FAST_MERGED_DOWNLOAD_MAX_BYTES = MAX_OPTIMIZED_OUTPUT_BYTES * 3;
     const MERGED_PRINT_MAX_BYTES = MAX_OPTIMIZED_OUTPUT_BYTES * 3;
     const getZipArtifactBudget = (artifactCount) => {
@@ -57,6 +62,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
     const [isMerchantFilterOpen, setIsMerchantFilterOpen] = useState(false);
     const [merchantFilterSearch, setMerchantFilterSearch] = useState('');
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+    const [isCommonFormatModalOpen, setIsCommonFormatModalOpen] = useState(false);
+    const [commonDownloadFormat, setCommonDownloadFormat] = useState('pdf');
     const [printSelectionMode, setPrintSelectionMode] = useState('all');
     const [selectedPrintMerchants, setSelectedPrintMerchants] = useState([]);
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -577,8 +584,32 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         processFile(droppedFile);
     };
 
-    const generatePdfBlob = async (htmlContent) => {
-        return generatePdfBlobFromHtml(htmlContent);
+    const generatePdfBlob = async (htmlContent, options = {}) => {
+        return generatePdfBlobFromHtml(htmlContent, options);
+    };
+
+    const generateCommonFolderBlob = async (invoiceDocument, format, maxBytes) => {
+        if (format === 'png') {
+            return generateImageBlobFromHtml(invoiceDocument.htmlContent, {
+                mimeType: 'image/png',
+                maxBytes,
+                label: `${invoiceDocument.filename}.png`,
+            });
+        }
+
+        if (format === 'jpeg') {
+            return generateImageBlobFromHtml(invoiceDocument.htmlContent, {
+                mimeType: 'image/jpeg',
+                quality: 0.92,
+                maxBytes,
+                label: `${invoiceDocument.filename}.jpeg`,
+            });
+        }
+
+        return generatePdfBlob(invoiceDocument.htmlContent, {
+            maxBytes,
+            label: `${invoiceDocument.filename}.pdf`,
+        });
     };
 
     const previewInvoice = (htmlContent, windowName = '_blank') => {
@@ -733,7 +764,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         }
     };
 
-    const downloadSeparateFilesZip = async () => {
+    const downloadSeparateFilesZip = async (commonFolderFormat = 'pdf') => {
         if (!preview || !filteredPreviewRows.length) return;
 
         if (!rrnColumn || !upiColumn || !amountColumn || !dateColumn || (isOthersWorkspace && !merchantColumn)) {
@@ -753,25 +784,11 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         try {
             const invoiceDocuments = filteredPreviewRows.map((rowData) => getInvoiceDocument(rowData));
             const totalRows = invoiceDocuments.length;
-            const merchantTrackers = new Map();
-            const merchantGroups = new Map();
             const zipEntries = [];
             const commonTracker = createUniqueFilenameTracker();
 
             invoiceDocuments.forEach((document) => {
-                const merchantKey = document.merchantLabel;
-                if (!merchantGroups.has(merchantKey)) {
-                    merchantGroups.set(merchantKey, []);
-                    merchantTrackers.set(merchantKey, createUniqueFilenameTracker());
-                }
-
-                const tracker = merchantTrackers.get(merchantKey);
-                const uniqueFilename = getUniquePdfBasename(document.filename, tracker);
-                document.uniqueFilename = uniqueFilename;
-                merchantGroups.get(merchantKey).push({
-                    ...document,
-                    uniqueFilename,
-                });
+                document.uniqueFilename = getUniquePdfBasename(document.filename, commonTracker);
             });
 
             const zipArtifactBudget = getZipArtifactBudget(totalRows + 1);
@@ -782,14 +799,14 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                     maxBytes: zipArtifactBudget,
                     label: `${invoiceDocument.uniqueFilename || invoiceDocument.filename}.pdf`,
                 });
-                const merchantFolderPath = sanitizePdfPathSegment(invoiceDocument.merchantLabel, 'Merchant');
+                const commonBlob = commonFolderFormat === 'pdf'
+                    ? pdfBlob
+                    : await generateCommonFolderBlob(invoiceDocument, commonFolderFormat, zipArtifactBudget);
+                const commonExtension = commonFolderFormat === 'jpeg' ? 'jpeg' : commonFolderFormat;
+
                 zipEntries.push({
-                    path: `${merchantFolderPath}/${invoiceDocument.uniqueFilename}.pdf`,
-                    blob: pdfBlob,
-                });
-                zipEntries.push({
-                    path: `common/${getUniquePdfBasename(invoiceDocument.filename, commonTracker)}.pdf`,
-                    blob: pdfBlob,
+                    path: `common/${invoiceDocument.uniqueFilename}.${commonExtension}`,
+                    blob: commonBlob,
                 });
                 setZipProgress(Math.round(((i + 1) / totalRows) * 80));
 
@@ -809,25 +826,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 });
             });
             setZipProgress(88);
-
-            const merchantEntriesList = Array.from(merchantGroups.entries());
-            for (let index = 0; index < merchantEntriesList.length; index += 1) {
-                const [merchantLabel, entries] = merchantEntriesList[index];
-                const merchantFolderPath = sanitizePdfPathSegment(merchantLabel, 'Merchant');
-                const merchantMergedEntries = await generateMergedPdfEntries(entries, {
-                    baseFilename: 'Merged',
-                    label: `${merchantLabel} merged PDF`,
-                });
-
-                merchantMergedEntries.forEach((entry) => {
-                    zipEntries.push({
-                        path: `${merchantFolderPath}/${entry.filename}`,
-                        blob: entry.blob,
-                    });
-                });
-
-                setZipProgress(88 + Math.round(((index + 1) / Math.max(merchantEntriesList.length, 1)) * 7));
-            }
+            setZipProgress(95);
 
             const dateSuffix = new Date().toISOString().split('T')[0];
             const zipBlob = await buildZipBlob(
@@ -836,11 +835,11 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                     blob: entry.blob,
                 }))
             );
-            triggerBlobDownload(zipBlob, `Invoices_PDF_${dateSuffix}.zip`);
+            triggerBlobDownload(zipBlob, `Invoices_${commonFolderFormat.toUpperCase()}_${dateSuffix}.zip`);
 
             setZipProgress(100);
             showToast(
-                `Successfully created one ZIP file with ${totalRows} PDF invoices and merged files.`,
+                `Successfully created one ZIP file with merged PDFs and common ${commonFolderFormat.toUpperCase()} files.`,
                 'success'
             );
         } catch (err) {
@@ -910,6 +909,16 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
         setPrintSelectionMode('all');
         setSelectedPrintMerchants(merchants.length === 1 ? merchants : []);
         setIsPrintModalOpen(true);
+    };
+
+    const openCommonFormatModal = () => {
+        setCommonDownloadFormat('pdf');
+        setIsCommonFormatModalOpen(true);
+    };
+
+    const handleCommonFormatConfirm = async () => {
+        setIsCommonFormatModalOpen(false);
+        await downloadSeparateFilesZip(commonDownloadFormat);
     };
 
     const handlePrintModeChange = (mode) => {
@@ -1274,8 +1283,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             </label>
                                             <select value={dateColumn} onChange={(e) => setDateColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
-                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
-                                                    <option key={header} value={header}>{header}</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map((header, index) => (
+                                                    <option key={`${header}-${index}`} value={header}>{header}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -1285,8 +1294,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             </label>
                                             <select value={merchantColumn} onChange={(e) => setMerchantColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
-                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
-                                                    <option key={header} value={header}>{header}</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map((header, index) => (
+                                                    <option key={`${header}-${index}`} value={header}>{header}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -1296,8 +1305,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             </label>
                                             <select value={customerNameColumn} onChange={(e) => setCustomerNameColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
-                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
-                                                    <option key={header} value={header}>{header}</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map((header, index) => (
+                                                    <option key={`${header}-${index}`} value={header}>{header}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -1307,8 +1316,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             </label>
                                             <select value={amountColumn} onChange={(e) => setAmountColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
-                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
-                                                    <option key={header} value={header}>{header}</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map((header, index) => (
+                                                    <option key={`${header}-${index}`} value={header}>{header}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -1318,8 +1327,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             </label>
                                             <select value={rrnColumn} onChange={(e) => setRrnColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
-                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
-                                                    <option key={header} value={header}>{header}</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map((header, index) => (
+                                                    <option key={`${header}-${index}`} value={header}>{header}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -1329,8 +1338,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             </label>
                                             <select value={upiColumn} onChange={(e) => setUpiColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select</option>
-                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
-                                                    <option key={header} value={header}>{header}</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map((header, index) => (
+                                                    <option key={`${header}-${index}`} value={header}>{header}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -1351,8 +1360,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             </label>
                                             <select value={duplicateColumn} onChange={(e) => setDuplicateColumn(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                                 <option value="">Select column</option>
-                                                {preview.headers.filter(header => header !== '_rowIndex').map(header => (
-                                                    <option key={header} value={header}>{header}</option>
+                                                {preview.headers.filter(header => header !== '_rowIndex').map((header, index) => (
+                                                    <option key={`${header}-${index}`} value={header}>{header}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -1448,7 +1457,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                             )}
                                         </button>
 
-                                        <button onClick={downloadSeparateFilesZip} disabled={isPdfActionInProgress || isViewingInTabs} className="inline-flex min-w-[11rem] items-center justify-center px-6 py-2 bg-white text-green-700 border border-green-200 hover:bg-green-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <button onClick={openCommonFormatModal} disabled={isPdfActionInProgress || isViewingInTabs} className="inline-flex min-w-[11rem] items-center justify-center px-6 py-2 bg-white text-green-700 border border-green-200 hover:bg-green-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                             {generatingZip ? (
                                                 <>
                                                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-700 border-t-transparent mr-2"></div>
@@ -1556,8 +1565,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                                     )}
                                                     {preview.headers.filter(header =>
                                                         header !== '_rowIndex' && header !== rrnColumn && header !== upiColumn && header !== merchantColumn && header !== amountColumn && header !== duplicateColumn && header !== dateColumn
-                                                    ).slice(0, 2).map((header) => (
-                                                        <th key={header} className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">{header}</th>
+                                                    ).slice(0, 2).map((header, index) => (
+                                                        <th key={`${header}-${index}`} className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">{header}</th>
                                                     ))}
                                                     <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 border-b">Invoice #</th>
                                                     <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 border-b">Action</th>
@@ -1596,8 +1605,8 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                                                             )}
                                                             {preview.headers.filter(header =>
                                                                 header !== '_rowIndex' && header !== rrnColumn && header !== upiColumn && header !== merchantColumn && header !== amountColumn && header !== duplicateColumn && header !== dateColumn
-                                                            ).slice(0, 2).map((header) => (
-                                                                <td key={header} className="px-4 py-2 text-xs text-gray-700">
+                                                            ).slice(0, 2).map((header, index) => (
+                                                                <td key={`${header}-${index}`} className="px-4 py-2 text-xs text-gray-700">
                                                                     {formatCellValue(row[header], header).substring(0, 25)}
                                                                     {formatCellValue(row[header], header).length > 25 ? '...' : ''}
                                                                 </td>
@@ -1722,6 +1731,66 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 onConfirm={handlePrintInvoices}
                 isSubmitting={isPrinting}
             />
+            {isCommonFormatModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">Common Folder Format</h3>
+                                <p className="mt-1 text-sm text-gray-600">
+                                    Choose the file type for the `common` folder before downloading the ZIP.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setIsCommonFormatModalOpen(false)}
+                                className="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                                aria-label="Close format selection"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                            {COMMON_FOLDER_FORMAT_OPTIONS.map((option) => {
+                                const isSelected = commonDownloadFormat === option.value;
+
+                                return (
+                                    <button
+                                        key={option.value}
+                                        onClick={() => setCommonDownloadFormat(option.value)}
+                                        className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
+                                            isSelected
+                                                ? 'border-green-500 bg-green-50'
+                                                : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50/40'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-sm font-semibold text-gray-900">{option.label}</span>
+                                            {isSelected && <CheckCircle className="h-4 w-4 text-green-600" />}
+                                        </div>
+                                        <p className="mt-1 text-xs text-gray-600">{option.description}</p>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div className="mt-5 flex justify-end gap-3">
+                            <button
+                                onClick={() => setIsCommonFormatModalOpen(false)}
+                                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCommonFormatConfirm}
+                                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
+                            >
+                                Download ZIP
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="fixed bottom-4 right-4 z-40 left-4 md:bottom-6 md:left-auto md:right-6">
                 {isMerchantNotesOpen && (
                     <div className="mb-3 w-full overflow-hidden rounded-[24px] border border-[#d7dbc7] bg-[#fffef7] shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:ml-auto md:w-[820px] md:max-w-[calc(100vw-3rem)] md:rounded-[28px]">

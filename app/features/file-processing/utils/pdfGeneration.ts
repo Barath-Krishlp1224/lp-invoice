@@ -302,7 +302,7 @@ export const isPdfRuntimeReady = () => (
     && typeof window.html2pdf === 'function'
 );
 
-const canvasToBlob = async (canvas, mimeType = 'image/png') => (
+const canvasToBlob = async (canvas, mimeType = 'image/png', quality) => (
     new Promise((resolve, reject) => {
         canvas.toBlob((blob) => {
             if (!blob) {
@@ -311,7 +311,7 @@ const canvasToBlob = async (canvas, mimeType = 'image/png') => (
             }
 
             resolve(blob);
-        }, mimeType);
+        }, mimeType, quality);
     })
 );
 
@@ -513,6 +513,25 @@ export const generatePdfBlobFromHtml = async (htmlContent, options = {}) => {
             maxBytes: options.maxBytes,
             pageCount: 1,
             label: options.label || 'Invoice PDF',
+        }
+    );
+};
+
+export const generateImageBlobFromHtml = async (htmlContent, options = {}) => {
+    const mimeType = options.mimeType === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+    const quality = mimeType === 'image/jpeg'
+        ? Math.min(1, Math.max(0.4, Number(options.quality) || 0.92))
+        : undefined;
+
+    return generateOptimizedPdfBlob(
+        async (renderProfile) => {
+            const canvas = await renderInvoiceCanvasFromHtml(htmlContent, renderProfile);
+            return canvasToBlob(canvas, mimeType, quality);
+        },
+        {
+            maxBytes: options.maxBytes,
+            pageCount: 1,
+            label: options.label || 'Invoice image',
         }
     );
 };

@@ -36,6 +36,39 @@ const formatDateTimeParts = (year, month, day, hours, minutes, seconds) => {
     return `${datePart} ${pad2(hours)}:${pad2(minutes)}:${pad2(seconds ?? 0)}`;
 };
 
+const splitTransactionDateTime = (value) => {
+    const trimmed = String(value || "").trim();
+    const match = trimmed.match(/^(\d{2}[\/-]\d{2}[\/-]\d{4})(?:\s+(.+))?$/);
+
+    if (!match) {
+        return {
+            dateOnly: trimmed || "N/A",
+            timeOnly: "-",
+            dateHtml: escapeHtml(trimmed || "N/A"),
+        };
+    }
+
+    const normalizedDate = match[1].replace(/-/g, "/");
+    const timeOnly = match[2]?.trim() || "-";
+
+    return {
+        dateOnly: normalizedDate,
+        timeOnly,
+        dateHtml: timeOnly !== "-"
+            ? `${escapeHtml(normalizedDate)}<br/>${escapeHtml(timeOnly)}`
+            : escapeHtml(normalizedDate),
+    };
+};
+
+const isDateLikeHeader = (header = "") => {
+    const headerLower = String(header || "").toLowerCase();
+
+    return headerLower.includes("date")
+        || headerLower.includes("time")
+        || headerLower.includes("txn")
+        || headerLower.includes("transaction");
+};
+
 const formatExcelSerialDate = (value) => {
     const excelEpoch = Date.UTC(1899, 11, 30);
     const date = new Date(excelEpoch + Math.round(value * 86400 * 1000));
@@ -52,85 +85,6 @@ const formatExcelSerialDate = (value) => {
         date.getUTCMinutes(),
         date.getUTCSeconds()
     );
-};
-
-const formatDateString = (value) => {
-    const trimmed = value.trim();
-
-    const isoLikeMatch = trimmed.match(
-        /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2})(?::(\d{1,2}))(?::\d{1,2})?(?:\.\d+)?)?(?:\s*(AM|PM))?(?:Z|[+-]\d{2}:?\d{2})?$/i
-    );
-
-    if (isoLikeMatch) {
-        let hours = isoLikeMatch[4];
-        const minutes = isoLikeMatch[5];
-        const seconds = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2})(?::(\d{1,2}))(?::(\d{1,2}))?(?:\.\d+)?)?(?:\s*(AM|PM))?(?:Z|[+-]\d{2}:?\d{2})?$/i)?.[6];
-        const meridiem = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2})(?::(\d{1,2}))(?::(\d{1,2}))?(?:\.\d+)?)?(?:\s*(AM|PM))?(?:Z|[+-]\d{2}:?\d{2})?$/i)?.[7]?.toUpperCase();
-
-        if (hours !== undefined && meridiem) {
-            let normalizedHours = Number(hours);
-            if (meridiem === "PM" && normalizedHours < 12) normalizedHours += 12;
-            if (meridiem === "AM" && normalizedHours === 12) normalizedHours = 0;
-            hours = normalizedHours;
-        }
-
-        return formatDateTimeParts(
-            Number(isoLikeMatch[1]),
-            Number(isoLikeMatch[2]),
-            Number(isoLikeMatch[3]),
-            hours !== undefined ? Number(hours) : undefined,
-            minutes !== undefined ? Number(minutes) : undefined,
-            seconds !== undefined ? Number(seconds) : undefined
-        );
-    }
-
-    const slashDateMatch = trimmed.match(
-        /^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})(?:[ ,T]+(\d{1,2})(?::(\d{1,2}))(?::(\d{1,2}))?\s*(AM|PM)?)?$/i
-    );
-
-    if (slashDateMatch) {
-        const first = Number(slashDateMatch[1]);
-        const second = Number(slashDateMatch[2]);
-        const year = slashDateMatch[3].length === 2 ? `20${slashDateMatch[3]}` : slashDateMatch[3];
-        const isDayFirst = first > 12;
-        const isMonthFirst = second > 12 || (!isDayFirst && first <= 12 && second <= 12);
-        const day = isMonthFirst ? second : first;
-        const month = isMonthFirst ? first : second;
-        let hours = slashDateMatch[4];
-        const minutes = slashDateMatch[5];
-        const seconds = slashDateMatch[6];
-        const meridiem = slashDateMatch[7]?.toUpperCase();
-
-        if (hours !== undefined && meridiem) {
-            let normalizedHours = Number(hours);
-            if (meridiem === "PM" && normalizedHours < 12) normalizedHours += 12;
-            if (meridiem === "AM" && normalizedHours === 12) normalizedHours = 0;
-            hours = normalizedHours;
-        }
-
-        return formatDateTimeParts(
-            Number(year),
-            month,
-            day,
-            hours !== undefined ? Number(hours) : undefined,
-            minutes !== undefined ? Number(minutes) : undefined,
-            seconds !== undefined ? Number(seconds) : undefined
-        );
-    }
-
-    const parsedDate = new Date(trimmed);
-    if (!Number.isNaN(parsedDate.getTime())) {
-        return formatDateTimeParts(
-            parsedDate.getFullYear(),
-            parsedDate.getMonth() + 1,
-            parsedDate.getDate(),
-            parsedDate.getHours(),
-            parsedDate.getMinutes(),
-            parsedDate.getSeconds()
-        );
-    }
-
-    return trimmed;
 };
 
 export const detectRequiredColumns = (headers) => {
@@ -156,12 +110,13 @@ export const detectRequiredColumns = (headers) => {
 
 export const formatCellValue = (value, header) => {
     const headerLower = header?.toLowerCase() || "";
+    const isDateHeader = isDateLikeHeader(header);
 
     if (typeof value === "number") {
         if (headerLower.includes("amount") || headerLower.includes("txnamount")) {
             return `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
         }
-        if (value > 10000 && value < 100000) {
+        if (isDateHeader && value > 10000 && value < 100000) {
             const formattedExcelDate = formatExcelSerialDate(value);
             if (formattedExcelDate) {
                 return formattedExcelDate;
@@ -183,7 +138,7 @@ export const formatCellValue = (value, header) => {
     }
 
     if (typeof value === "string" && value.trim()) {
-        return formatDateString(value);
+        return value.trim();
     }
 
     return String(value || "");
@@ -1939,18 +1894,19 @@ export const generateProfessionalInvoiceHTML = (
     const descriptionText = workspaceMode === "others"
         ? "Services rendered and goals delivered successfully"
         : "Wallet Loading";
-    const transactionDateParts = transactionDateTimeDisplay.match(/^(\d{2}\/\d{2}\/\d{4})(?:\s+(.+))?$/);
-    const transactionDateOnly = transactionDateParts?.[1] || escapeHtml(transactionDateTimeDisplay);
-    const transactionTimeOnly = transactionDateParts?.[2] ? escapeHtml(transactionDateParts[2]) : "-";
-    const transactionDateHtml = transactionDateParts?.[2]
-        ? `${escapeHtml(transactionDateParts[1])}<br/>${escapeHtml(transactionDateParts[2])}`
-        : escapeHtml(transactionDateTimeDisplay);
+    const {
+        dateOnly: transactionDateOnlyRaw,
+        timeOnly: transactionTimeOnlyRaw,
+        dateHtml: transactionDateHtml,
+    } = splitTransactionDateTime(transactionDateTimeDisplay);
+    const transactionDateOnly = escapeHtml(transactionDateOnlyRaw);
+    const transactionTimeOnly = escapeHtml(transactionTimeOnlyRaw);
 
     const fields = {
         addressHtml: String(merchantInfo.address || "Address details not configured").replace(/<br\/>/g, "<br/>"),
         customerName: escapeHtml(customerNameValue),
         upiId: escapeHtml(upiIdValue),
-        transactionDate: escapeHtml(transactionDateTimeDisplay),
+        transactionDate: transactionDateOnly,
         transactionDateOnly,
         transactionTimeOnly,
         transactionDateHtml,
