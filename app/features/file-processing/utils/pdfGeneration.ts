@@ -446,6 +446,7 @@ const generateOptimizedPdfBlob = async (producer, {
     pageCount = 1,
     label = 'PDF export',
     onAttemptProgress,
+    allowOversizeFallback = false,
 } = {}) => {
     const safeMaxBytes = Math.max(MIN_SINGLE_ARTIFACT_BYTES, Number(maxBytes) || MAX_OPTIMIZED_OUTPUT_BYTES);
     const startingIndex = getRecommendedProfileIndex(pageCount, safeMaxBytes);
@@ -503,6 +504,19 @@ const generateOptimizedPdfBlob = async (producer, {
         await waitForNextFrame();
     }
 
+    if (smallestBlob && allowOversizeFallback) {
+        onAttemptProgress?.({
+            stage: 'optimizing',
+            status: 'accepted',
+            attempt: totalAttempts,
+            totalAttempts,
+            blobSize: smallestSize,
+            maxBytes: safeMaxBytes,
+            oversizeFallback: true,
+        });
+        return smallestBlob;
+    }
+
     if (smallestBlob) {
         throw buildSizeLimitError(label, safeMaxBytes, smallestSize);
     }
@@ -517,6 +531,7 @@ export const generatePdfBlobFromHtml = async (htmlContent, options = {}) => {
             maxBytes: options.maxBytes,
             pageCount: 1,
             label: options.label || 'Invoice PDF',
+            allowOversizeFallback: Boolean(options.allowOversizeFallback),
         }
     );
 };
@@ -536,6 +551,7 @@ export const generateImageBlobFromHtml = async (htmlContent, options = {}) => {
             maxBytes: options.maxBytes,
             pageCount: 1,
             label: options.label || 'Invoice image',
+            allowOversizeFallback: Boolean(options.allowOversizeFallback),
         }
     );
 };

@@ -598,6 +598,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 mimeType: 'image/png',
                 maxBytes,
                 label: `${invoiceDocument.filename}.png`,
+                allowOversizeFallback: true,
             });
         }
 
@@ -607,12 +608,14 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 quality: 0.92,
                 maxBytes,
                 label: `${invoiceDocument.filename}.jpeg`,
+                allowOversizeFallback: true,
             });
         }
 
         return generatePdfBlob(invoiceDocument.htmlContent, {
             maxBytes,
             label: `${invoiceDocument.filename}.pdf`,
+            allowOversizeFallback: true,
         });
     };
 
@@ -800,6 +803,7 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 const pdfBlob = await generatePdfBlob(invoiceDocument.htmlContent, {
                     maxBytes: MAX_OPTIMIZED_OUTPUT_BYTES,
                     label: `${invoiceDocument.uniqueFilename || invoiceDocument.filename}.pdf`,
+                    allowOversizeFallback: true,
                 });
                 const commonBlob = commonFolderFormat === 'pdf'
                     ? pdfBlob
