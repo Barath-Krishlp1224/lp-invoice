@@ -82,8 +82,8 @@ export const renderShadausInvoiceHTML = ({
         }
 
         .header-top {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: minmax(360px, 1fr) 220px;
             align-items: flex-start;
             gap: 24px;
             position: relative;
@@ -91,12 +91,15 @@ export const renderShadausInvoiceHTML = ({
         }
 
         .header-brand {
-            flex: 1;
             display: flex;
-            align-items: center;
-            gap: 24px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 14px;
             justify-content: flex-start;
             text-align: left;
+            width: 100%;
+            max-width: 360px;
+            min-width: 0;
         }
 
         .header-logo {
@@ -112,8 +115,10 @@ export const renderShadausInvoiceHTML = ({
             flex-direction: column;
             align-items: flex-start;
             justify-content: center;
-            text-align: center;
+            text-align: left;
             max-width: 360px;
+            width: 100%;
+            margin-top: 2px;
         }
 
         .header-company {
@@ -121,8 +126,11 @@ export const renderShadausInvoiceHTML = ({
             color: #0f172a;
             font-weight: 600;
             letter-spacing: 0.02em;
-            text-align: center;
+            text-align: left;
             width: 100%;
+            line-height: 1.45;
+            word-break: normal;
+            overflow-wrap: break-word;
         }
 
         .header-address {
@@ -132,13 +140,16 @@ export const renderShadausInvoiceHTML = ({
             line-height: 1.7;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            text-align: center;
+            text-align: left;
             width: 100%;
+            word-break: normal;
+            overflow-wrap: break-word;
         }
 
         .header-invoice-label {
             position: relative;
             z-index: 1;
+            width: 220px;
             min-width: 220px;
             margin-top: 12px;
         }
@@ -557,10 +568,14 @@ export const renderShadausInvoiceHTML = ({
                 padding: 28px 20px 36px;
             }
 
-            .header-brand {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 14px;
+            .header-top {
+                grid-template-columns: 1fr;
+            }
+
+            .header-invoice-label {
+                width: 100%;
+                min-width: 0;
+                margin-top: 8px;
             }
 
             .meta-cards {
@@ -603,7 +618,7 @@ export const renderShadausInvoiceHTML = ({
             <div class="header">
                 <div class="header-top">
                     <div class="header-brand">
-                        <img src="/assets/merchants/Shadaus.png" alt="Shadaus Logo" class="header-logo" />
+                        <img src="${merchantInfo.logoPath}" alt="${escapeHtml(merchantInfo.displayName)} Logo" class="header-logo" />
                         <div class="header-brand-copy">
                             <div class="header-company">${escapeHtml(merchantInfo.companyName || receiptName)}</div>
                             <div class="header-address">${fields.addressHtml}</div>
