@@ -26,3 +26,13 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 .vscode/
+
+# OpenNext
+.open-next
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+
+!.env.example
