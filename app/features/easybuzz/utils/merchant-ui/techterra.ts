@@ -39,14 +39,15 @@ export const renderTechterraInvoiceHTML = ({
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             margin: 0;
-            background: #151515;
-            color: #f5f5f5;
+            background: #ffffff;
+            color: #2f3842;
             font-family: "Segoe UI", Arial, sans-serif;
         }
         .page {
             width: 210mm;
             min-height: 297mm;
             margin: 0 auto;
+            background: #ffffff;
         }
         .invoice {
             position: relative;
@@ -54,9 +55,10 @@ export const renderTechterraInvoiceHTML = ({
             min-height: 297mm;
             padding: 14mm 14mm 10mm;
             background:
-                linear-gradient(115deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 38%),
-                radial-gradient(circle at 20% 18%, rgba(255,255,255,0.04), transparent 34%),
-                linear-gradient(180deg, #262626 0%, #1b1b1b 100%);
+                radial-gradient(circle at 12% 10%, rgba(214, 188, 126, 0.34), transparent 30%),
+                radial-gradient(circle at 84% 86%, rgba(181, 150, 92, 0.24), transparent 28%),
+                radial-gradient(circle at 10% 82%, rgba(226, 204, 154, 0.2), transparent 22%),
+                linear-gradient(180deg, #ffffff 0%, #fffefb 100%);
             overflow: hidden;
         }
         .content {
@@ -66,7 +68,7 @@ export const renderTechterraInvoiceHTML = ({
         .hero-pill {
             width: 86mm;
             min-height: 22mm;
-            border: 1px solid rgba(144, 19, 19, 0.9);
+            border: 1px solid rgba(190, 33, 33, 0.24);
             border-left: none;
             border-radius: 0 11mm 11mm 0;
             display: flex;
@@ -90,14 +92,14 @@ export const renderTechterraInvoiceHTML = ({
             line-height: 0.95;
             font-weight: 300;
             letter-spacing: 0.02em;
-            color: #ffffff;
+            color: #b91c1c;
         }
         .hero-subtitle {
             margin-top: 1.5mm;
             font-size: 9px;
             letter-spacing: 0.18em;
             text-transform: uppercase;
-            color: rgba(255,255,255,0.82);
+            color: rgba(120, 33, 33, 0.7);
         }
         .top-meta {
             display: grid;
@@ -110,14 +112,14 @@ export const renderTechterraInvoiceHTML = ({
         .to-label,
         .meta-label {
             font-size: 11px;
-            color: rgba(255,255,255,0.92);
+            color: rgba(47, 56, 66, 0.88);
             font-weight: 700;
             margin-bottom: 3mm;
         }
         .to-value {
             font-size: 10px;
             line-height: 1.75;
-            color: rgba(255,255,255,0.84);
+            color: rgba(47, 56, 66, 0.84);
             text-align: center;
             margin-top: -10mm;
         }
@@ -127,25 +129,25 @@ export const renderTechterraInvoiceHTML = ({
             font-size: 15px;
             line-height: 1.2;
             white-space: nowrap;
-            color: #ffffff;
+            color: #b91c1c;
             text-align: center;
         }
         .meta-card {
-            border: 1px solid rgba(255,255,255,0.18);
+            border: 1px solid rgba(190, 33, 33, 0.16);
             border-radius: 4mm;
             padding: 4.5mm 5mm;
-            background: rgba(255,255,255,0.02);
+            background: rgba(255, 255, 255, 0.82);
             backdrop-filter: blur(2px);
         }
         .meta-row + .meta-row {
             margin-top: 4mm;
             padding-top: 4mm;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid rgba(190, 33, 33, 0.1);
         }
         .meta-value {
             font-size: 11px;
             line-height: 1.6;
-            color: rgba(255,255,255,0.88);
+            color: rgba(47, 56, 66, 0.88);
             word-break: break-word;
         }
         .meta-inline {
@@ -171,9 +173,9 @@ export const renderTechterraInvoiceHTML = ({
             gap: 5mm;
         }
         .client-item {
-            border: 1px solid rgba(255,255,255,0.14);
+            border: 1px solid rgba(190, 33, 33, 0.14);
             border-radius: 4mm;
-            background: rgba(255,255,255,0.03);
+            background: rgba(255,255,255,0.82);
             padding: 4mm 5mm;
             text-align: center;
         }
@@ -181,14 +183,43 @@ export const renderTechterraInvoiceHTML = ({
             font-size: 9px;
             letter-spacing: 0.14em;
             text-transform: uppercase;
-            color: rgba(255,255,255,0.62);
+            color: rgba(120, 33, 33, 0.66);
             margin-bottom: 1.5mm;
             font-weight: 700;
         }
         .client-value {
             font-size: 12px;
             line-height: 1.45;
-            color: #ffffff;
+            color: #2f3842;
+            font-weight: 700;
+            word-break: break-word;
+        }
+        .transaction-strip {
+            margin-top: 0;
+            margin-bottom: 8mm;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5mm;
+        }
+        .transaction-item {
+            border: 1px solid rgba(190, 33, 33, 0.14);
+            border-radius: 4mm;
+            background: rgba(255,255,255,0.82);
+            padding: 4mm 5mm;
+            text-align: center;
+        }
+        .transaction-label {
+            font-size: 9px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(120, 33, 33, 0.66);
+            margin-bottom: 1.5mm;
+            font-weight: 700;
+        }
+        .transaction-value {
+            font-size: 12px;
+            line-height: 1.45;
+            color: #2f3842;
             font-weight: 700;
             word-break: break-word;
         }
@@ -216,7 +247,7 @@ export const renderTechterraInvoiceHTML = ({
             gap: 4mm;
             align-items: start;
             padding: 4.5mm 6mm;
-            color: rgba(255,255,255,0.92);
+            color: rgba(47, 56, 66, 0.92);
             font-size: 12px;
             line-height: 1.45;
             text-align: center;
@@ -241,16 +272,16 @@ export const renderTechterraInvoiceHTML = ({
         .payment-title,
         .notes__title {
             font-size: 14px;
-            margin-top: 10rem;
+            margin-top: 0;
             font-weight: 800;
-            color: #ffffff;
+            color: #b91c1c;
             margin-bottom: 3mm;
         }
         .payment-copy,
         .notes__body {
             font-size: 12px;
             line-height: 1.75;
-            color: rgba(255,255,255,0.82);
+            color: rgba(47, 56, 66, 0.82);
         }
         .notes__list {
             margin: 0;
@@ -260,7 +291,7 @@ export const renderTechterraInvoiceHTML = ({
             margin-top: 1.5mm;
         }
         .totals {
-            justify-self: end;
+            justify-self: start;
             width: 100%;
             max-width: 54mm;
         }
@@ -271,13 +302,13 @@ export const renderTechterraInvoiceHTML = ({
             align-items: baseline;
             font-size: 11px;
             font-weight: 700;
-            color: rgba(255,255,255,0.92);
+            color: rgba(47, 56, 66, 0.92);
             margin-bottom: 2.5mm;
         }
         .rule {
             margin: 8mm 0 6mm;
             height: 1px;
-            background: rgba(255,255,255,0.45);
+            background: rgba(190, 33, 33, 0.2);
         }
         .grand-row {
             display: flex;
@@ -286,20 +317,20 @@ export const renderTechterraInvoiceHTML = ({
             align-items: baseline;
             font-size: 11px;
             font-weight: 800;
-            color: #ffffff;
+            color: #b91c1c;
         }
         .note-pill {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             min-height: 10mm;
-            border: 1px solid rgba(255,255,255,0.88);
+            border: 1px solid rgba(190, 33, 33, 0.3);
             border-radius: 999px;
             padding: 0 5mm;
             margin-top: 8mm;
             font-size: 10px;
             font-weight: 700;
-            color: #ffffff;
+            color: #b91c1c;
         }
         .footer-copy {
             margin-top: 12mm;
@@ -309,18 +340,22 @@ export const renderTechterraInvoiceHTML = ({
             display: block;
             font-size: 12px;
             font-weight: 800;
-            color: #ffffff;
+            color: #b91c1c;
             margin-bottom: 2mm;
         }
         .footer-copy div {
             font-size: 10px;
             line-height: 1.65;
-            color: rgba(255,255,255,0.84);
+            color: rgba(47, 56, 66, 0.84);
         }
         @media print {
             body { background: #ffffff; }
-            .page { width: 210mm; }
+            .page {
+                width: 210mm;
+                min-height: 297mm;
+            }
             .invoice {
+                min-height: 297mm;
                 box-shadow: none;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
@@ -382,6 +417,17 @@ export const renderTechterraInvoiceHTML = ({
                     </div>
                 </div>
 
+                <div class="transaction-strip">
+                    <div class="transaction-item">
+                        <div class="transaction-label">Transaction Date</div>
+                        <div class="transaction-value">${fields.transactionDateOnly || "N/A"}</div>
+                    </div>
+                    <div class="transaction-item">
+                        <div class="transaction-label">Transaction Time</div>
+                        <div class="transaction-value">${fields.transactionTimeOnly || "N/A"}</div>
+                    </div>
+                </div>
+
                 <div class="table-head">
                     <span>Description</span>
                     <span>Qty</span>
@@ -425,7 +471,7 @@ export const renderTechterraInvoiceHTML = ({
 
                     </div>
                     <div class="totals">
-                        <div class="grand-row"><span>Grand Total</span><strong>${formatCurrency(formattedAmount)}</strong></div>
+                        <div class="grand-row"><span>Total</span><strong>${formatCurrency(formattedAmount)}</strong></div>
                     </div>
                 </div>
             </div>

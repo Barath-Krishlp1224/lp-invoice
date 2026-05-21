@@ -36,6 +36,9 @@ const formatDateTimeParts = (year, month, day, hours, minutes, seconds) => {
     return `${datePart} ${pad2(hours)}:${pad2(minutes)}:${pad2(seconds ?? 0)}`;
 };
 
+const formatTimeParts = (hours, minutes, seconds) =>
+    `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds ?? 0)}`;
+
 const normalizeTimeWithMeridiem = (value) => {
     const trimmed = String(value || "").trim();
 
@@ -43,14 +46,30 @@ const normalizeTimeWithMeridiem = (value) => {
         return "-";
     }
 
-    if (/\b(am|pm)\b/i.test(trimmed)) {
-        return trimmed.toUpperCase().replace(/\s+/g, " ");
+    const normalizedText = trimmed
+        .replace(/\./g, ":")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const meridiemMatch = normalizedText.match(/^(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?\s*([AP])\.?M?\.?$/i);
+    if (meridiemMatch) {
+        const hours12 = Number(meridiemMatch[1]);
+        const minutes = meridiemMatch[2] ?? "00";
+        const seconds = meridiemMatch[3];
+
+        if (hours12 >= 1 && hours12 <= 12) {
+            return `${pad2(hours12)}:${minutes}${seconds ? `:${seconds}` : ""} ${meridiemMatch[4].toUpperCase()}M`;
+        }
     }
 
-    const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (/\b(am|pm)\b/i.test(normalizedText)) {
+        return normalizedText.toUpperCase().replace(/\s+/g, " ");
+    }
+
+    const match = normalizedText.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
 
     if (!match) {
-        return trimmed;
+        return normalizedText;
     }
 
     const hours24 = Number(match[1]);
@@ -58,7 +77,7 @@ const normalizeTimeWithMeridiem = (value) => {
     const seconds = match[3];
 
     if (!Number.isInteger(hours24) || hours24 < 0 || hours24 > 23) {
-        return trimmed;
+        return normalizedText;
     }
 
     const meridiem = hours24 >= 12 ? "PM" : "AM";
@@ -67,11 +86,83 @@ const normalizeTimeWithMeridiem = (value) => {
     return `${pad2(hours12)}:${minutes}${seconds ? `:${seconds}` : ""} ${meridiem}`;
 };
 
-const splitTransactionDateTime = (value) => {
-    const trimmed = String(value || "").trim();
-    const match = trimmed.match(/^(\d{2}[\/-]\d{2}[\/-]\d{4})(?:\s+(.+))?$/);
+const formatExcelSerialTime = (value) => {
+    const totalSeconds = Math.round(Number(value) * 86400);
 
-    if (!match) {
+    if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
+        return null;
+    }
+
+    const hours = Math.floor(totalSeconds / 3600) % 24;
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return formatTimeParts(hours, minutes, seconds);
+};
+
+const extractDateAndTimeParts = (value) => {
+    const trimmed = String(value || "").trim();
+
+    if (!trimmed || trimmed === "-") {
+        return null;
+    }
+
+    const isoMatch = trimmed.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:[T\s,]+(.+))?$/);
+    if (isoMatch) {
+        return {
+            dateOnly: `${pad2(isoMatch[3])}/${pad2(isoMatch[2])}/${isoMatch[1]}`,
+            timeOnly: normalizeTimeWithMeridiem(isoMatch[4] || "-"),
+        };
+    }
+
+    const localMatch = trimmed.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})(?:[T\s,]+(.+))?$/);
+    if (localMatch) {
+        const year = localMatch[3].length === 2 ? `20${localMatch[3]}` : localMatch[3];
+        const first = pad2(localMatch[1]);
+        const second = pad2(localMatch[2]);
+
+        return {
+            dateOnly: `${first}/${second}/${year}`,
+            timeOnly: normalizeTimeWithMeridiem(localMatch[4] || "-"),
+        };
+    }
+
+    const parsedDate = new Date(trimmed);
+    if (!Number.isNaN(parsedDate.getTime())) {
+        return {
+            dateOnly: formatDateTimeParts(
+                parsedDate.getFullYear(),
+                parsedDate.getMonth() + 1,
+                parsedDate.getDate()
+            ),
+            timeOnly: normalizeTimeWithMeridiem(
+                formatTimeParts(
+                    parsedDate.getHours(),
+                    parsedDate.getMinutes(),
+                    parsedDate.getSeconds()
+                )
+            ),
+        };
+    }
+
+    return null;
+};
+
+const splitTransactionDateTime = (value) => {
+    const parsed = extractDateAndTimeParts(value);
+
+    if (!parsed) {
+        const trimmed = String(value || "").trim();
+        const normalizedTimeOnly = normalizeTimeWithMeridiem(trimmed);
+
+        if (/^\d{2}:\d{2}(?::\d{2})?(?:\s(?:AM|PM))?$/.test(normalizedTimeOnly)) {
+            return {
+                dateOnly: "N/A",
+                timeOnly: normalizedTimeOnly,
+                dateHtml: `N/A<br/>${escapeHtml(normalizedTimeOnly)}`,
+            };
+        }
+
         return {
             dateOnly: trimmed || "N/A",
             timeOnly: "-",
@@ -79,8 +170,8 @@ const splitTransactionDateTime = (value) => {
         };
     }
 
-    const normalizedDate = match[1].replace(/-/g, "/");
-    const timeOnly = normalizeTimeWithMeridiem(match[2]?.trim() || "-");
+    const normalizedDate = parsed.dateOnly;
+    const timeOnly = parsed.timeOnly || "-";
 
     return {
         dateOnly: normalizedDate,
@@ -121,6 +212,20 @@ const formatExcelSerialDate = (value) => {
 export const detectRequiredColumns = (headers) => {
     const detectedColumns = {};
 
+    detectedColumns.transactionDate = headers.find((header) => {
+        const lower = header.toLowerCase();
+        return (lower.includes("transaction") && lower.includes("date"))
+            || (lower.includes("txn") && lower.includes("date"))
+            || lower.includes("date");
+    });
+
+    detectedColumns.transactionTime = headers.find((header) => {
+        const lower = header.toLowerCase();
+        return (lower.includes("transaction") && lower.includes("time"))
+            || (lower.includes("txn") && lower.includes("time"))
+            || lower.includes("time");
+    });
+
     detectedColumns.amount = headers.find((header) => {
         const lower = header.toLowerCase();
         return lower.includes("amount")
@@ -146,6 +251,12 @@ export const formatCellValue = (value, header) => {
     if (typeof value === "number") {
         if (headerLower.includes("amount") || headerLower.includes("txnamount")) {
             return `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+        }
+        if (headerLower.includes("time") && value >= 0 && value < 1) {
+            const formattedExcelTime = formatExcelSerialTime(value);
+            if (formattedExcelTime) {
+                return formattedExcelTime;
+            }
         }
         if (isDateHeader && value > 10000 && value < 100000) {
             const formattedExcelDate = formatExcelSerialDate(value);
@@ -173,6 +284,48 @@ export const formatCellValue = (value, header) => {
     }
 
     return String(value || "");
+};
+
+const buildTransactionDateTimeDisplay = (rowData, dateColumn, detectedCols) => {
+    const rawDateValue = dateColumn && rowData?.[dateColumn] !== undefined
+        ? rowData[dateColumn]
+        : detectedCols.transactionDate
+            ? rowData?.[detectedCols.transactionDate]
+            : undefined;
+    const rawTimeValue = detectedCols.transactionTime
+        ? rowData?.[detectedCols.transactionTime]
+        : undefined;
+
+    const formattedDateValue = rawDateValue !== undefined && rawDateValue !== null && rawDateValue !== ""
+        ? formatCellValue(rawDateValue, dateColumn || detectedCols.transactionDate)
+        : "";
+    const formattedTimeValue = rawTimeValue !== undefined && rawTimeValue !== null && rawTimeValue !== ""
+        ? formatCellValue(rawTimeValue, detectedCols.transactionTime)
+        : "";
+
+    const parsedDateTime = extractDateAndTimeParts(formattedDateValue);
+    const normalizedTime = formattedTimeValue ? normalizeTimeWithMeridiem(formattedTimeValue) : "-";
+
+    if (parsedDateTime) {
+        const resolvedTime = parsedDateTime.timeOnly && parsedDateTime.timeOnly !== "-"
+            ? parsedDateTime.timeOnly
+            : normalizedTime;
+
+        return resolvedTime !== "-"
+            ? `${parsedDateTime.dateOnly} ${resolvedTime}`
+            : parsedDateTime.dateOnly;
+    }
+
+    const safeDateValue = String(formattedDateValue || "").trim();
+    if (!safeDateValue && normalizedTime !== "-") {
+        return normalizedTime;
+    }
+
+    if (safeDateValue && normalizedTime !== "-" && !/\b(am|pm)\b/i.test(safeDateValue) && !/\d{1,2}:\d{2}/.test(safeDateValue)) {
+        return `${safeDateValue} ${normalizedTime}`;
+    }
+
+    return safeDateValue || "N/A";
 };
 
 const merchantDesigns = {
@@ -1897,13 +2050,10 @@ export const generateProfessionalInvoiceHTML = (
     const merchantInfo = getMerchantConfig(rowData, merchantColumn, workspaceMode);
     const design = getInvoiceDesign(merchantInfo);
     const invoiceNumberToDisplay = invoiceNumber ? String(invoiceNumber) : "-";
+    const detectedCols = detectRequiredColumns(Object.keys(rowData || {}).filter((key) => key !== "_rowIndex"));
 
-    let transactionDateTimeDisplay = "N/A";
-    if (dateColumn && rowData[dateColumn] !== undefined) {
-        transactionDateTimeDisplay = formatCellValue(rowData[dateColumn], dateColumn);
-    }
+    const transactionDateTimeDisplay = buildTransactionDateTimeDisplay(rowData, dateColumn, detectedCols);
 
-    const detectedCols = detectRequiredColumns([]);
     let amountValue = 0;
     if (amountColumn && rowData[amountColumn] !== undefined && rowData[amountColumn] !== null && rowData[amountColumn] !== "") {
         const rawValue = String(rowData[amountColumn]).replace(/[₹,\s]/g, "");

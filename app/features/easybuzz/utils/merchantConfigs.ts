@@ -194,8 +194,8 @@ const MERCHANT_CONFIGS = {
             displayName: 'ZOVING BUSINESS',
             companyName: 'ZOVING BUSINESS SOFTWARE SOLUTIONS PRIVATE LIMITED',
             invoiceCode: '25',
-            address: '32, NEDU STREET, VISWANATHAPURAM, PANRUTI, NELLIKKUPPAM, CUDDALORE - 607105<br/>GST: 33AACCZ5103E1ZS',
-            receiptEntityName: 'ZVLP',
+            address: 'NO. 32, NEDU STREET, VISWANATHAPURAM, PANRUTI, NELLIKKUPPAM, CUDDALORE - 607105,TAMIL NADU<br/>GST: 33AACCZ5103E1ZS',
+            receiptEntityName: 'ZBLP',
             logoPath: '/assets/merchants/Zoving business.png',
             themeColor: '#7c3aed',
             aliases: [

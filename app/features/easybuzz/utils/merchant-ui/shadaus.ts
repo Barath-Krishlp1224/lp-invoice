@@ -19,12 +19,9 @@ export const renderShadausInvoiceHTML = ({
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             margin: 0;
-            background:
-                linear-gradient(138deg, #f4f1eb 0 16%, transparent 16% 84%, #d9d6d1 84% 100%),
-                linear-gradient(42deg, transparent 0 78%, #ece8e2 78% 100%),
-                #f3f0ea;
-            color: #ffffff;
-            font-family: "Trebuchet MS", Arial, sans-serif;
+            background: #0f172a;
+            color: #1e293b;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         }
         .page {
             width: 100%;
@@ -37,365 +34,471 @@ export const renderShadausInvoiceHTML = ({
             width: 170mm;
             min-height: 277mm;
             margin: 0 auto;
-            background: linear-gradient(180deg, #13597a 0%, #0f506e 45%, #0c4762 100%);
-            box-shadow: 0 20px 44px rgba(15, 23, 42, 0.3);
-            padding: 14mm 10mm 9mm;
+            background: #ffffff;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             position: relative;
             overflow: hidden;
         }
-        .top-row {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 8mm;
-            align-items: start;
-            margin-bottom: 3mm;
+        
+        /* Decorative Header Background */
+        .header-decoration {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 85mm;
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+            clip-path: polygon(0 0, 100% 0, 100% 75%, 0 100%);
+            z-index: 0;
         }
-        .brand {
+        
+        .header-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 85mm;
+            opacity: 0.1;
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.3) 10px, rgba(255,255,255,0.3) 20px),
+                repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255,255,255,0.2) 10px, rgba(255,255,255,0.2) 20px);
+        }
+        
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+            padding: 14mm 12mm 9mm;
+        }
+        
+        /* Top Header Section */
+        .top-section {
             display: flex;
-            align-items: center;
-            gap: 4mm;
-            min-height: 18mm;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8mm;
         }
-        .brand img {
-            width: 75mm;
-            max-height: 20mm;
+        
+        .brand-area {
+            flex: 1;
+        }
+        
+        .brand-logo {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 4mm;
+            border-radius: 3mm;
+            display: inline-block;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .brand-logo img {
+            width: 70mm;
+            max-height: 18mm;
             object-fit: contain;
-            object-position: left center;
-            filter: brightness(0) invert(1);
+            display: block;
         }
-        .title {
+        
+        .invoice-badge {
             text-align: right;
-            display: grid;
-            gap: 2.5mm;
-            justify-items: end;
         }
-        .title-word {
-            font-size: 12mm;
-            line-height: 0.94;
+        
+        .badge-main {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 4mm 5mm;
+            border-radius: 3mm;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: inline-block;
+            min-width: 55mm;
+        }
+        
+        .invoice-label {
+            font-size: 8mm;
             font-weight: 900;
-            letter-spacing: 0.08em;
+            color: #1e40af;
+            letter-spacing: 0.05em;
+            margin-bottom: 2mm;
+            display: block;
         }
-        .title-meta {
+        
+        .invoice-meta {
             display: grid;
             gap: 1.5mm;
-            min-width: 44mm;
+            margin-top: 3mm;
         }
-        .title-card {
-            border-left: 0.5mm solid rgba(255,255,255,0.68);
-            padding-left: 3mm;
+        
+        .invoice-meta-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 2.8mm;
+            padding: 1.5mm 0;
+            border-bottom: 0.2mm solid #e2e8f0;
         }
-        .title-label {
-            font-size: 2.5mm;
-            line-height: 1.3;
-            letter-spacing: 0.12em;
+        
+        .invoice-meta-row:last-child {
+            border-bottom: none;
+        }
+        
+        .meta-label {
+            color: #64748b;
+            font-weight: 600;
             text-transform: uppercase;
-            color: rgba(255,255,255,0.72);
+            letter-spacing: 0.05em;
+            font-size: 2.4mm;
         }
-        .title-value {
-            display: block;
-            margin-top: 0.8mm;
-            font-size: 3.3mm;
-            line-height: 1.4;
+        
+        .meta-value {
+            color: #0f172a;
             font-weight: 700;
-            color: #ffffff;
-            word-break: break-word;
+            font-size: 2.8mm;
         }
-        .rule {
-            height: 0.35mm;
-            background: rgba(255,255,255,0.42);
-            margin: 15mm 0 5mm;
-        }
-        .hero-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-            gap: 7mm;
-            align-items: end;
-            margin-bottom: 8mm;
-            margin-top: 15mm;
-        }
-        .bill-label,
-        .meta-label,
-        .section-kicker {
-            font-size: 2.7mm;
-            line-height: 1.3;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.72);
-        }
-        .bill-name {
-            font-size: 6.2mm;
-            line-height: 1.15;
-            font-weight: 700;
-            margin: 1mm 0 2mm;
-            text-align: center;
-        }
-        .bill-address {
-            font-size: 3.1mm;
-            line-height: 1.6;
-            color: rgba(255,255,255,0.86);
-            text-align: center;
-        }
-        .meta-grid {
+        
+        /* Info Cards Section */
+        .info-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4mm;
-            margin-bottom: 4mm;
+            gap: 6mm;
+            margin-top: 10mm;
+            margin-bottom: 8mm;
         }
-        .meta-card {
-            border-left: 0.5mm solid rgba(255,255,255,0.68);
-            padding-left: 3mm;
-            min-height: 12mm;
+        
+        .info-card {
+            background: #ffffff;
+            border: 0.4mm solid #e2e8f0;
+            border-radius: 3mm;
+            padding: 5mm;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
         }
-        .meta-value {
-            display: block;
-            margin-top: 1mm;
-            font-size: 3.4mm;
-            line-height: 1.4;
+        
+        .info-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 1mm;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        }
+        
+        .card-title {
+            font-size: 3mm;
             font-weight: 700;
-            color: #ffffff;
+            color: #3b82f6;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 3mm;
+            display: flex;
+            align-items: center;
+            gap: 2mm;
+        }
+        
+        .card-title::before {
+            content: '';
+            width: 1mm;
+            height: 4mm;
+            background: #3b82f6;
+            display: block;
+        }
+        
+        .card-name {
+            font-size: 5mm;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 2mm;
+            line-height: 1.3;
+        }
+        
+        .card-address {
+            font-size: 3.2mm;
+            line-height: 1.6;
+            color: #475569;
+        }
+        
+        .transaction-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3mm;
+        }
+        
+        .transaction-item {
+            background: #f8fafc;
+            padding: 3mm;
+            border-radius: 2mm;
+            border-left: 0.6mm solid #3b82f6;
+        }
+        
+        .transaction-label {
+            font-size: 2.5mm;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-bottom: 1mm;
+        }
+        
+        .transaction-value {
+            font-size: 10px;
+            color: #0f172a;
+            font-weight: 700;
             word-break: break-word;
         }
-        .total-pill {
-            margin-left: auto;
-            width: fit-content;
-            max-width: 100%;
-            background: rgba(255,255,255,0.95);
-            color: #434343;
-            border-radius: 2mm;
-            padding: 3mm 5mm;
-            font-size: 7.6mm;
-            line-height: 1;
-            box-shadow: 0 12px 20px rgba(15, 23, 42, 0.16);
-            white-space: nowrap;
+        
+        /* Items Table */
+        .items-section {
+            margin: 8mm 0;
         }
-        .table-card {
-            background: rgba(255,255,255,0.96);
+        
+        .section-header {
+            font-size: 4.5mm;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 4mm;
+            display: flex;
+            align-items: center;
+            gap: 3mm;
+        }
+        
+        .section-header::before {
+            content: '';
+            width: 1.5mm;
+            height: 6mm;
+            background: linear-gradient(180deg, #3b82f6, #60a5fa);
+            display: block;
+        }
+        
+        .table-wrapper {
+            background: #ffffff;
+            border: 0.4mm solid #e2e8f0;
             border-radius: 3mm;
             overflow: hidden;
-            box-shadow: none;
-            margin-bottom: 7mm;
-            margin-top: 15mm;
-            width: calc(100% + 8mm);
-            margin-left: -4mm;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
+        
         table {
             width: 100%;
             border-collapse: collapse;
         }
+        
+        thead {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        }
+        
         thead th {
-            padding: 4mm 3mm 3.2mm;
-            text-align: center;
-            font-size: 4.2mm;
-            font-weight: 800;
-            color: #1f2937;
-            border-bottom: 0.35mm solid rgba(31, 41, 55, 0.9);
+            padding: 4mm 3mm;
+            text-align: left;
+            font-size: 3.2mm;
+            font-weight: 700;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
+        
+        thead th:not(:first-child) {
+            text-align: right;
+        }
+        
         tbody td {
-            text-align: center;
+            padding: 4mm 3mm;
+            font-size: 3.3mm;
+            color: #334155;
+            border-bottom: 0.2mm solid #e2e8f0;
+            text-align: left;
         }
-        .table-card tbody td {
-            padding: 3.6mm 3mm;
-            font-size: 3.25mm;
-            line-height: 1.45;
-            color: #374151;
-            border-bottom: 0.25mm solid #d9e2ea;
-            vertical-align: top;
-        }
-        .table-card tbody td:nth-child(n + 2) {
+        
+        tbody td:not(:first-child) {
+            text-align: right;
             white-space: nowrap;
+            font-weight: 600;
         }
+        
+        tbody tr:last-child {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            font-weight: 700;
+        }
+        
         tbody tr:last-child td {
             border-bottom: none;
+            color: #1e40af;
+            font-size: 3.8mm;
+            padding: 4.5mm 3mm;
         }
-        .desc-title {
-            display: block;
+        
+        tbody tr:last-child td:first-child {
+            font-size: 4.2mm;
+            font-weight: 900;
+        }
+        
+        .item-description {
             font-weight: 700;
-            color: #111827;
-            margin-bottom: 0.6mm;
-            text-align: center;
+            color: #0f172a;
         }
-        .desc-copy {
-            display: block;
-            color: #6b7280;
-            font-size: 2.75mm;
-            line-height: 1.45;
-            text-align: center;
-        }
-        .total-label {
-            font-weight: 800;
-            color: #111827;
-        }
-        .bottom-grid {
+        
+        /* Summary Section */
+        .summary-section {
             display: grid;
-            grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.45fr);
+            grid-template-columns: 1fr 65mm;
             gap: 8mm;
-            align-items: start;
+            margin-top: 10mm;
         }
-        .info-title,
+        
+        .terms-box {
+            background: #f8fafc;
+            border: 0.4mm solid #e2e8f0;
+            border-radius: 3mm;
+            padding: 5mm;
+        }
+        
         .terms-title {
-            font-size: 4.8mm;
-            line-height: 1.2;
+            font-size: 4mm;
             font-weight: 800;
-            margin-bottom: 2.5mm;
+            color: #0f172a;
+            margin-bottom: 3mm;
+            display: flex;
+            align-items: center;
+            gap: 2mm;
         }
-        .payment-lines {
-            display: grid;
-            gap: 1.8mm;
-            margin-bottom: 6mm;
+        
+        .terms-title::before {
+            content: '📋';
+            font-size: 5mm;
         }
-        .payment-line {
-            display: grid;
-            grid-template-columns: 23mm 1fr;
-            gap: 3mm;
-            font-size: 3.05mm;
-            line-height: 1.45;
-            color: rgba(255,255,255,0.82);
-        }
-        .payment-line strong {
-            color: #ffffff;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-        .section-rule {
-            width: 100%;
-            height: 0.35mm;
-            background: rgba(255,255,255,0.42);
-            margin: 4mm 0 3mm;
-        }
-        .terms-copy {
-            font-size: 3mm;
-            line-height: 1.7;
-            color: rgba(255,255,255,0.82);
-        }
-        .notes__title {
-            font-size: 4.8mm;
-            line-height: 1.2;
-            font-weight: 800;
-            margin-bottom: 2.5mm;
-            margin-top: 40mm;        }
-        .notes__body {
-            font-size: 12px;
-            line-height: 1.7;
-            color: rgba(255,255,255,0.82);
-        }
-        .notes__list {
-            list-style: disc;
-            padding-left: 5mm;
+        
+        .terms-list {
+            list-style: none;
+            padding: 0;
             margin: 0;
         }
-        .notes__list li + li {
-            margin-top: 1.8mm;
+        
+        .terms-list li {
+            font-size: 2.9mm;
+            line-height: 1.7;
+            color: #475569;
+            padding-left: 4mm;
+            margin-bottom: 2.5mm;
+            position: relative;
         }
-        .summary {
-            padding-top: 1mm;
-            min-width: 40mm;
-            margin-left: -10mm;
+        
+        .terms-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #3b82f6;
+            font-weight: 900;
+            font-size: 3.5mm;
         }
-        .summary-line {
-            display: flex;
-            justify-content: space-between;
-            gap: 4mm;
-            padding: 2mm 0;
-            font-size: 3.2mm;
-            line-height: 1.4;
-            color: rgba(255,255,255,0.84);
-            border-bottom: 0.3mm solid rgba(255,255,255,0.38);
-        }
-        .summary-line strong {
-            color: #ffffff;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-        .summary-total {
-            margin-top: 4mm;
-            width: 100%;
-            border-radius: 1.6mm;
+        
+        .total-box {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            border-radius: 3mm;
+            padding: 3.2mm 5mm;
+            box-shadow: 0 10px 25px rgba(30, 64, 175, 0.3);
+            position: relative;
             overflow: hidden;
-            border: 0.25mm solid rgba(12, 18, 28, 0.28);
+            display: inline-block;
+            width: fit-content;
+            max-width: 100%;
+            align-self: start;
         }
-        .summary-total table td {
-            padding: 2.6mm 3.2mm;
-            background: rgba(255,255,255,0.92);
-            font-size: 3.8mm;
-            line-height: 1.2;
-            color: #202020;
-            font-weight: 800;
-            border: none;
-            white-space: nowrap;
+        
+        .total-box::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 40mm;
+            height: 40mm;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
         }
-        .summary-total table td:last-child {
-            text-align: right;
-            border-left: 0.25mm solid rgba(31, 41, 55, 0.24);
+        
+        .total-box::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 35mm;
+            height: 35mm;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 50%;
         }
-        .signature {
-            margin-top: 11mm;
-            text-align: right;
+        
+        .total-content {
+            position: relative;
+            z-index: 1;
         }
-        .signature-mark {
-            font-family: "Brush Script MT", "Segoe Script", cursive;
-            font-size: 10mm;
+        
+        .total-label {
+            font-size: 3.1mm;
+            color: rgba(255, 255, 255, 0.85);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            font-weight: 600;
+            margin-bottom: 1.2mm;
+        }
+        
+        .total-amount {
+            font-size: 8mm;
+            font-weight: 900;
+            color: #ffffff;
             line-height: 1;
-            color: rgba(255,255,255,0.92);
+            letter-spacing: -0.02em;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
-        .signature-rule {
-            width: 42mm;
-            height: 0.35mm;
-            background: rgba(255,255,255,0.65);
-            margin: 1.8mm 0 1.5mm auto;
-        }
-        .signature-name {
-            font-size: 4.8mm;
-            line-height: 1.2;
+        
+        .total-subtext {
+            font-size: 2.5mm;
+            color: rgba(255, 255, 255, 0.75);
+            margin-top: 1.2mm;
             font-weight: 500;
         }
-        .signature-role {
-            font-size: 3.1mm;
-            line-height: 1.4;
-            color: rgba(255,255,255,0.72);
-        }
+        
+        /* Footer */
         .footer {
-            margin-top: 8mm;
-            padding-top: 4mm;
-            border-top: 0.35mm solid rgba(255,255,255,0.34);
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 4mm;
+            margin-top: 12mm;
+            padding-top: 5mm;
+            border-top: 0.3mm solid #e2e8f0;
+            text-align: center;
         }
-        .footer-item {
-            display: flex;
-            gap: 2mm;
-            align-items: flex-start;
-            font-size: 2.85mm;
-            line-height: 1.45;
-            color: rgba(255,255,255,0.82);
+        
+        .footer-text {
+            font-size: 3mm;
+            color: #64748b;
+            line-height: 1.6;
         }
-        .footer-dot {
-            width: 4.2mm;
-            height: 4.2mm;
-            border-radius: 999px;
-            background: rgba(255,255,255,0.9);
-            color: #0f506e;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5mm;
-            font-weight: 900;
-            flex-shrink: 0;
-            margin-top: 0.2mm;
+        
+        .footer-highlight {
+            color: #3b82f6;
+            font-weight: 700;
         }
+        
+        .footer-note {
+            margin-top: 2mm;
+            font-size: 2.6mm;
+            color: #94a3b8;
+            font-style: italic;
+        }
+        
         @media print {
-            body { background: #ffffff; }
-            .page { padding: 0; }
+            body { 
+                background: #ffffff; 
+            }
+            .page { 
+                padding: 0; 
+            }
             .invoice {
                 width: 100%;
                 min-height: 297mm;
                 box-shadow: none;
             }
-            .invoice,
-            .total-pill,
-            .table-card,
-            .summary-total table td,
-            .footer-dot {
+            .header-decoration,
+            .header-pattern,
+            .brand-logo,
+            .badge-main,
+            .info-card,
+            .table-wrapper,
+            .terms-box,
+            .total-box,
+            thead {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -409,112 +512,118 @@ export const renderShadausInvoiceHTML = ({
 <body>
     <div class="page">
         <div class="invoice">
-            <div class="top-row">
-                <div class="brand">
-                    <img src="${merchantInfo.logoPath}" alt="${escapeHtml(merchantInfo.displayName)} logo" />
-                </div>
-                <div class="title">
-                    <div class="title-meta">
-                        <div class="title-card">
-                            <div class="title-label">Invoice Number</div>
-                            <span class="title-value">${escapeHtml(invoiceNumberToDisplay)}</span>
+            <div class="header-decoration"></div>
+            <div class="header-pattern"></div>
+            
+            <div class="content-wrapper">
+                <!-- Header -->
+                <div class="top-section">
+                    <div class="brand-area">
+                        <div class="brand-logo">
+                            <img src="${merchantInfo.logoPath}" alt="${escapeHtml(merchantInfo.displayName)} logo" />
                         </div>
-                        <div class="title-card">
-                            <div class="title-label">RRN Number</div>
-                            <span class="title-value">${escapeHtml(formatRrnValue(rrnValue))}</span>
+                    </div>
+                    <div class="invoice-badge">
+                        <div class="badge-main">
+                            <span class="invoice-label">INVOICE</span>
+                            <div class="invoice-meta">
+                                <div class="invoice-meta-row">
+                                    <span class="meta-label">Invoice #</span>
+                                    <span class="meta-value">${escapeHtml(invoiceNumberToDisplay)}</span>
+                                </div>
+                                <div class="invoice-meta-row">
+                                    <span class="meta-label">RRN</span>
+                                    <span class="meta-value">${escapeHtml(formatRrnValue(rrnValue))}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="rule"></div>
-
-            <section class="hero-grid">
-                <div>
-                    <div class="bill-name">${escapeHtml(merchantInfo.companyName)}</div>
-                    <div class="bill-address">${fields.addressHtml}</div>
-                </div>
-                <div>
-                    <div class="meta-grid">
-                        <div class="meta-card">
-                            <div class="meta-label">Name</div>
-                            <span class="meta-value">${escapeHtml(fields.customerName)}</span>
-                        </div>
-                        <div class="meta-card">
-                            <div class="meta-label">UPI ID</div>
-                            <span class="meta-value">${escapeHtml(fields.upiId)}</span>
-                        </div>
-                        <div class="meta-card">
-                            <div class="meta-label">Transaction Date</div>
-                            <span class="meta-value">${escapeHtml(fields.transactionDateOnly)}</span>
-                        </div>
-                        <div class="meta-card">
-                            <div class="meta-label">Transaction Time</div>
-                            <span class="meta-value">${escapeHtml(fields.transactionTimeOnly)}</span>
+                <!-- Info Cards -->
+                <div class="info-section">
+                    <div class="info-card">
+                        <div class="card-name">${escapeHtml(merchantInfo.companyName)}</div>
+                        <div class="card-address">${fields.addressHtml}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-title">Transaction Details</div>
+                        <div class="transaction-grid">
+                            <div class="transaction-item">
+                                <div class="transaction-label">Name</div>
+                                <div class="transaction-value">${escapeHtml(fields.customerName)}</div>
+                            </div>
+                            <div class="transaction-item">
+                                <div class="transaction-label">UPI ID</div>
+                                <div class="transaction-value">${escapeHtml(fields.upiId)}</div>
+                            </div>
+                            <div class="transaction-item">
+                                <div class="transaction-label">Transaction Date</div>
+                                <div class="transaction-value">${escapeHtml(fields.transactionDateOnly)}</div>
+                            </div>
+                            <div class="transaction-item">
+                                <div class="transaction-label">Transaction Time</div>
+                                <div class="transaction-value">${escapeHtml(fields.transactionTimeOnly)}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </section>
 
-            <section class="table-card">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 32%;">Description</th>
-                            <th style="width: 10%;">Qty</th>
-                            <th style="width: 14%;">Unit Price</th>
-                            <th style="width: 14%;">Gross Amount</th>
-                            <th style="width: 12%;">Tax</th>
-                            <th style="width: 18%;">Net Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>
-                                <span class="desc-title">${escapeHtml(descriptionText)}</span>
-                            </td>
-                            <td>1</td>
-                            <td>₹ ${formattedAmount}</td>
-                            <td>₹ ${formattedAmount}</td>
-                            <td>₹ 0.00</td>
-                            <td>₹ ${formattedAmount}</td>
-                        </tr>
-                        <tr>
-                            <td class="total-label" colspan="3">Total</td>
-                            <td>₹ ${formattedAmount}</td>
-                            <td>₹ 0.00</td>
-                            <td>₹ ${formattedAmount}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
+                <!-- Items Table -->
+                <div class="items-section">
+                    <div class="section-header">Items & Charges</div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Qty</th>
+                                    <th>Unit Price</th>
+                                    <th>Gross</th>
+                                    <th>Tax</th>
+                                    <th>Net Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="item-description">${escapeHtml(descriptionText)}</span></td>
+                                    <td>1</td>
+                                    <td>₹ ${formattedAmount}</td>
+                                    <td>₹ ${formattedAmount}</td>
+                                    <td>₹ 0.00</td>
+                                    <td>₹ ${formattedAmount}</td>
+                                </tr>
+                                <tr>
+                                    <td>TOTAL</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>₹ ${formattedAmount}</td>
+                                    <td>₹ 0.00</td>
+                                    <td>₹ ${formattedAmount}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-            <section class="bottom-grid">
-                <div>
-
-                    <div class="notes__title">Terms & Conditions:</div>
-                    <div class="notes__body">
-                        <ul class="notes__list">
+                <!-- Summary Section -->
+                <div class="summary-section">
+                    <div class="terms-box">
+                        <div class="terms-title">Terms & Conditions</div>
+                        <ul class="terms-list">
                             <li>By receiving this receipt, the user confirms that the applicable fees were paid to ${escapeHtml(merchantInfo.receiptEntityName || merchantInfo.displayName)} through the payment gateway and accepts the company's terms related to this transaction.</li>
                             <li>This receipt is issued against the UPI ID through which the payment was collected and verified.</li>
                             <li>This is a computer-generated receipt - no physical seal or signature required.</li>
                         </ul>
                     </div>
-                </div>
-
-                <div class="summary">
-                    <div class="summary-total">
-                        <table>
-                            <tr>
-                                <td>Total</td>
-                                <td>₹ ${formattedAmount}</td>
-                            </tr>
-                        </table>
+                    <div class="total-box">
+                        <div class="total-content">
+                            <div class="total-label">Total Amount</div>
+                            <div class="total-amount">₹ ${formattedAmount}</div>                            
+                        </div>
                     </div>
-
-                   
                 </div>
-            </section>
+            </div>
         </div>
     </div>
 </body>

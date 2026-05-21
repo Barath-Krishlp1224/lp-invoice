@@ -244,6 +244,8 @@ export const renderZovingBusinessInvoiceHTML = ({
             color: #1a1a1a;
             letter-spacing: 0.02em;
             white-space: nowrap;
+            width: 100%;
+            text-align: center;
         }
 
         .company-info-address {
@@ -407,6 +409,7 @@ export const renderZovingBusinessInvoiceHTML = ({
             align-items: baseline;
             gap: 40px;
             padding: 8px 0 18px;
+            margin-top:10mm;
         }
 
         .tl {
@@ -558,12 +561,11 @@ export const renderZovingBusinessInvoiceHTML = ({
 
                 <div class="contact-row">
                     <div class="company-info-line">
-                        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 20V8"></path><path d="M12 20V8"></path><path d="M17 20V8"></path><path d="M3 8h18"></path></svg>
                         <span class="company-info-name">${escapeHtml(companyName)}</span>
                     </div>
                     <div class="company-info-line">
                         <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                        <span class="company-info-address">${escapeHtml(addressText)}</span>
+                        <span class="company-info-address">${escapeHtml(addressText)}${gstText ? `, GST: ${escapeHtml(gstText)}` : ""}</span>
                     </div>
                 </div>
 
@@ -608,7 +610,9 @@ export const renderZovingBusinessInvoiceHTML = ({
                                 <td class="amount-cell">${escapeHtml(invoiceAmount)}</td>
                             </tr>
                             <tr class="total-row">
-                                <td colspan="3" style="text-align:right;">Total</td>
+                                <td>Total</td>
+                                <td></td>
+                                <td></td>
                                 <td class="amount-cell">${escapeHtml(invoiceAmount)}</td>
                                 <td>0</td>
                                 <td class="amount-cell">${escapeHtml(invoiceAmount)}</td>
