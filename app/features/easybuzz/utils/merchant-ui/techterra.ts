@@ -443,13 +443,13 @@ export const renderTechterraInvoiceHTML = ({
                         <span>1</span>
                         <span>${formatCurrency(formattedAmount)}</span>
                         <span>${formatCurrency(formattedAmount)}</span>
-                        <span>₹ 0.00</span>
+                        <span>0.00</span>
                         <span>${formatCurrency(formattedAmount)}</span>
                     </div>
                     <div class="table-row total-row">
                         <span class="desc">Total</span>
                         <span>${formatCurrency(formattedAmount)}</span>
-                        <span>₹ 0.00</span>
+                        <span>0.00</span>
                         <span>${formatCurrency(formattedAmount)}</span>
                     </div>
                 </div>

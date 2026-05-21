@@ -262,14 +262,15 @@ export const renderZovingBusinessInvoiceHTML = ({
         }
 
         .puzzle-tile {
-            background: #efe5dc;
+            background-color: #efe5dc;
             border: 1px solid rgba(180, 107, 74, 0.16);
             padding: 14px 16px;
             min-height: 78px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
+            position: relative;
+            overflow: hidden;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -462,9 +463,17 @@ export const renderZovingBusinessInvoiceHTML = ({
         .terms-list {
             margin: 0;
             padding-left: 18px;
-            color: #cfd6df;
+            color: #ffffff;
             font-size: 11px;
             line-height: 1.7;
+        }
+
+        .terms-list li {
+            color: #ffffff;
+        }
+
+        .terms-list li::marker {
+            color: #ffffff;
         }
 
         .terms-list li + li {

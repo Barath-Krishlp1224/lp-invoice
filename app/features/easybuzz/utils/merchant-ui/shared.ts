@@ -164,7 +164,7 @@ export const renderGenericMerchantInvoiceHTML = (
 ) => {
     const design = getDesign(merchantKey);
     const showSplitDateTime = merchantKey === "apextech";
-    const taxValue = merchantKey === "apextech" ? "-" : "₹ 0.00";
+    const taxValue = merchantKey === "apextech" ? "-" : "0.00";
     const totalColspan = merchantKey === "apextech" ? 4 : 3;
 
     return `<!DOCTYPE html>

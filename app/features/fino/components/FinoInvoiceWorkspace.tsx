@@ -10,11 +10,6 @@ import { MAX_OPTIMIZED_OUTPUT_BYTES, buildZipBlob, createUniqueFilenameTracker, 
 import PrintSelectionModal from '../../file-processing/components/PrintSelectionModal';
 
 export default function FinoInvoiceWorkspace() {
-    const getZipArtifactBudget = (artifactCount) => {
-        const reservedZipOverhead = 512 * 1024;
-        const usableBytes = Math.max(256 * 1024, MAX_OPTIMIZED_OUTPUT_BYTES - reservedZipOverhead);
-        return Math.max(140 * 1024, Math.floor(usableBytes / Math.max(artifactCount, 1)));
-    };
     const generateMergedPdfEntries = async (documents, {
         baseFilename,
         label,
@@ -430,12 +425,10 @@ export default function FinoInvoiceWorkspace() {
                 });
             });
 
-            const zipArtifactBudget = getZipArtifactBudget(totalRows + 1);
-
             for (let i = 0; i < totalRows; i += 1) {
                 const invoiceDocument = invoiceDocuments[i];
                 const pdfBlob = await generatePdfBlob(invoiceDocument.htmlContent, {
-                    maxBytes: zipArtifactBudget,
+                    maxBytes: MAX_OPTIMIZED_OUTPUT_BYTES,
                     label: `${invoiceDocument.uniqueFilename || invoiceDocument.filename}.pdf`,
                 });
                 const merchantFolderPath = sanitizePdfPathSegment(invoiceDocument.merchantLabel, 'Merchant');

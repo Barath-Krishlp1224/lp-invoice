@@ -485,13 +485,13 @@ export const renderCodeHorizonInvoiceHTML = ({
                             <td>1</td>
                             <td>₹ ${formattedAmount}</td>
                             <td>₹ ${formattedAmount}</td>
-                            <td>${taxDisplay === "0" ? "0" : `₹ ${taxDisplay}`}</td>
+                            <td>${taxDisplay}</td>
                             <td>₹ ${formattedAmount}</td>
                         </tr>
                         <tr class="total-row">
                             <td colspan="3">TOTAL</td>
                             <td>₹ ${formattedAmount}</td>
-                            <td>${taxDisplay === "0" ? "0" : `₹ ${taxDisplay}`}</td>
+                            <td>${taxDisplay}</td>
                             <td>₹ ${formattedAmount}</td>
                         </tr>
                     </tbody>

@@ -20,11 +20,6 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
     ];
     const FAST_MERGED_DOWNLOAD_MAX_BYTES = MAX_OPTIMIZED_OUTPUT_BYTES * 3;
     const MERGED_PRINT_MAX_BYTES = MAX_OPTIMIZED_OUTPUT_BYTES * 3;
-    const getZipArtifactBudget = (artifactCount) => {
-        const reservedZipOverhead = 512 * 1024;
-        const usableBytes = Math.max(256 * 1024, MAX_OPTIMIZED_OUTPUT_BYTES - reservedZipOverhead);
-        return Math.max(140 * 1024, Math.floor(usableBytes / Math.max(artifactCount, 1)));
-    };
     const generateMergedPdfEntries = async (documents, {
         baseFilename,
         label,
@@ -800,17 +795,15 @@ export default function EasybuzzInvoiceWorkspace({ workspaceMode = 'easybuzz' })
                 document.uniqueFilename = getUniquePdfBasename(document.filename, commonTracker);
             });
 
-            const zipArtifactBudget = getZipArtifactBudget(totalRows + 1);
-
             for (let i = 0; i < invoiceDocuments.length; i += 1) {
                 const invoiceDocument = invoiceDocuments[i];
                 const pdfBlob = await generatePdfBlob(invoiceDocument.htmlContent, {
-                    maxBytes: zipArtifactBudget,
+                    maxBytes: MAX_OPTIMIZED_OUTPUT_BYTES,
                     label: `${invoiceDocument.uniqueFilename || invoiceDocument.filename}.pdf`,
                 });
                 const commonBlob = commonFolderFormat === 'pdf'
                     ? pdfBlob
-                    : await generateCommonFolderBlob(invoiceDocument, commonFolderFormat, zipArtifactBudget);
+                    : await generateCommonFolderBlob(invoiceDocument, commonFolderFormat, MAX_OPTIMIZED_OUTPUT_BYTES);
                 const commonExtension = commonFolderFormat === 'jpeg' ? 'jpeg' : commonFolderFormat;
 
                 zipEntries.push({

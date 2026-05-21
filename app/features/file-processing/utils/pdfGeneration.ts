@@ -169,10 +169,14 @@ const getRecommendedProfileIndex = (pageCount, maxBytes = MAX_OPTIMIZED_OUTPUT_B
 };
 
 const buildSizeLimitError = (label, maxBytes, optimizedSize) => {
+    const lowerLabel = String(label || '').toLowerCase();
+    const guidance = lowerLabel.includes('merged')
+        ? 'Please reduce the number of invoices in a single merged export.'
+        : 'Please simplify the invoice content or export fewer files at a time.';
     const error = new Error(
         `${label} could not be optimized below ${formatBytes(maxBytes)}. `
         + `Best generated size: ${formatBytes(optimizedSize)}. `
-        + 'Please reduce the number of invoices in a single merged export.'
+        + guidance
     );
     error.code = 'PDF_SIZE_LIMIT_EXCEEDED';
     error.maxBytes = maxBytes;

@@ -284,7 +284,7 @@ export const renderOrionbyteInvoiceHTML = ({
             font-size: 13px;
             font-weight: 800;
             color: #262626;
-            text-align: right;
+            text-align: left;
         }
         .summary-card strong { color: #262626; }
         .footer {
@@ -417,8 +417,6 @@ export const renderOrionbyteInvoiceHTML = ({
 
                     <div class="payment-block">
                         <div class="payment-head">
-                            <div class="payment-title">Company Details</div>
-                            <div class="payment-rule"></div>
                         </div>
                         <div class="payment-copy">
                             <strong>${escapeHtml(merchantInfo.companyName || merchantInfo.displayName)}</strong>
@@ -447,13 +445,13 @@ export const renderOrionbyteInvoiceHTML = ({
                             <td>1</td>
                             <td>${formatCurrency(formattedAmount)}</td>
                             <td>${formatCurrency(formattedAmount)}</td>
-                            <td>₹ 0.00</td>
+                            <td>0.00</td>
                             <td>${formatCurrency(formattedAmount)}</td>
                         </tr>
                         <tr>
                             <td colspan="3" style="text-align: center; font-weight: 700;">Total</td>
                             <td>${formatCurrency(formattedAmount)}</td>
-                            <td>₹ 0.00</td>
+                            <td>0.00</td>
                             <td>${formatCurrency(formattedAmount)}</td>
                         </tr>
                     </tbody>
